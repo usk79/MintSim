@@ -1,0 +1,12 @@
+/// # controllerモデル
+/// Controllerモデルには、下記のモデルを実装する
+/// 
+/// - PID制御モデル
+/// - 微分器モデル
+/// - 積分器モデル
+use super::model_core::{ModelCore};
+
+use super::super::sim_signal;
+use sim_signal::signal::{SigDef, SigTrait};
+
+use sim_signal::bus::{Bus, RefBus};

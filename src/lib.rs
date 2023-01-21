@@ -8,16 +8,16 @@ mod tests {
     
     use crate::simcore::sim_model::{test_models::TestModel, model_core::ModelCore};
     use crate::simcore::sim_signal::{bus, signal};
+    use crate::simcore::sim_system::SimSystem;
     use bus::{*};
     use signal::{*};
-    use crate::simcore::sim_model::test_models;
     
 
     //use super::simcore::sim_signal::bus::{Bus};
     //use super::simcore::sim_signal::signal::{Signal};
 
     #[test]
-    fn it_works() {
+    fn model_unittest() {
         let mut mdl = TestModel::new();
         let mut datbus = Bus::try_from(vec![
             SigDef::new("data1", "kW"),
@@ -46,6 +46,14 @@ mod tests {
         
         assert_eq!(outbus[0].val(), 6.0);
         assert_eq!(outbus[1].val(), 3.0);
+        
+    }
+
+    #[test]
+    fn system_test() {
+        let sys = SimSystem::new();
+        // ジェネリクスではなく、トレイトオブジェクトとして実装しないといけないことに気が付いたので修正
+
         
     }
 }
