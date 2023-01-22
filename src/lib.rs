@@ -49,11 +49,5 @@ mod tests {
         
     }
 
-    #[test]
-    fn system_test() {
-        let sys = SimSystem::new();
-        // ジェネリクスではなく、トレイトオブジェクトとして実装しないといけないことに気が付いたので修正
-
-        
-    }
+    
 }

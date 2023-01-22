@@ -6,6 +6,7 @@
 /// - Ramp関数
 /// - Sin関数
 /// - 三角波関数
+/// - Lookup（CSVファイル読み込み）
 
 use super::model_core::{ModelCore};
 

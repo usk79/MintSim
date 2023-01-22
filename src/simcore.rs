@@ -3,3 +3,4 @@
 pub mod sim_signal;
 pub mod sim_model;
 pub mod sim_system;
+pub mod sim_common;
