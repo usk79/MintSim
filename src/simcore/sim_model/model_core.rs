@@ -1,14 +1,17 @@
 
 use super::super::sim_signal;
 use sim_signal::bus::{Bus, RefBus};
+use super::super::sim_system;
+use sim_system::SimTime;
 
+pub const DEFAULT_DELTA_T: f64  = 0.1;
 
 pub trait ModelCore {
     /// 初期化処理
-    fn initialize(&mut self, delta_t: f64);
+    fn initialize(&mut self);
 
     /// シミュレーション時間を1ステップ進める
-    fn nextstate(&mut self, sim_time: f64);
+    fn nextstate(&mut self, sim_time: &SimTime);
 
     /// 終了処理
     fn finalize(&mut self);

@@ -5,11 +5,13 @@ use sim_signal::signal::{SigDef, SigTrait};
 
 use sim_signal::bus::{Bus, RefBus};
 
+use super::super::sim_system;
+use sim_system::SimTime;
+
 pub struct TestModel {
     inbus: RefBus,
     outbus: Bus,
     state: f64,
-    delta_t: f64,
 }
 
 impl TestModel {
@@ -30,20 +32,18 @@ impl TestModel {
             inbus: inbus,
             outbus: outbus,
             state: 0.0,
-            delta_t: 0.1,
         }
     }
 }
 
 impl ModelCore for TestModel {
-    fn initialize(&mut self, delta_t: f64) {
+    fn initialize(&mut self) {
         self.state = 0.0;
-        self.delta_t = delta_t;
     }
 
     fn finalize(&mut self) {}
 
-    fn nextstate(&mut self, _sim_time: f64) {
+    fn nextstate(&mut self, _sim_time: &SimTime) {
         let in1 = self.inbus[0].val();
         let in2 = self.inbus[1].val();
 
@@ -67,7 +67,6 @@ pub struct TestModel2 {
     inbus: RefBus,
     outbus: Bus,
     state: f64,
-    delta_t: f64,
 }
 
 impl TestModel2 {
@@ -88,19 +87,17 @@ impl TestModel2 {
             inbus: inbus,
             outbus: outbus,
             state: 0.0,
-            delta_t: 0.1,
         }
     }
 }
 
 impl ModelCore for TestModel2 {
-    fn initialize(&mut self, delta_t: f64) {
+    fn initialize(&mut self) {
         self.state = 0.0;
-        self.delta_t = delta_t;
     }
     fn finalize(&mut self) {}
 
-    fn nextstate(&mut self, _sim_time: f64) {
+    fn nextstate(&mut self, _sim_time: &SimTime) {
         let in1 = self.inbus[0].val();
         let in2 = self.inbus[1].val();
 
