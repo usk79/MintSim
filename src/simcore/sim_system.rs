@@ -112,19 +112,14 @@ impl<'a> SimSystem<'a> {
         let mut print_cnt = 0;
         let mut progress_cnt = 0; // 進捗カウンタ
         
-        loop {
-            match self.sim_time.next() {
-                Some(_s) => {
-                    print_cnt += 1;
-                    if print_cnt >= print_interval {
-                        progress_cnt += 1;
-                        print_cnt = 0;
-                        println!("processing now ... {}%)\n", progress_cnt * 10);
-                    }
-                    self.nextstate();
-                },
-                None => break
+        while let Some(_s) = self.sim_time.next() {
+            print_cnt += 1;
+            if print_cnt >= print_interval {
+                progress_cnt += 1;
+                print_cnt = 0;
+                println!("processing now ... {}%)\n", progress_cnt * 10);
             }
+            self.nextstate();
         }
         
         // 終了処理
