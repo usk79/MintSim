@@ -107,19 +107,24 @@ impl<'a> SimSystem<'a> {
         // 初期化処理
         self.initialize();
 
-        // シミュレーション実行処理
+        // シミュレーション実行処理 
         let print_interval = self.sim_time.step_num() / 10;
         let mut print_cnt = 0;
         let mut progress_cnt = 0; // 進捗カウンタ
         
-        for _s in self.sim_time.into_iter() {
-            print_cnt += 1;
-            if print_cnt >= print_interval {
-                progress_cnt += 1;
-                print_cnt = 0;
-                println!("processing now ... {}%)\n", progress_cnt * 10);
+        loop {
+            match self.sim_time.next() {
+                Some(_s) => {
+                    print_cnt += 1;
+                    if print_cnt >= print_interval {
+                        progress_cnt += 1;
+                        print_cnt = 0;
+                        println!("processing now ... {}%)\n", progress_cnt * 10);
+                    }
+                    self.nextstate();
+                },
+                None => break
             }
-            self.nextstate();
         }
         
         // 終了処理

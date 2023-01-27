@@ -63,7 +63,7 @@ impl<T: SigTrait> BusCore<T> {
             None => None
         }
     }
-
+    
     /// Signalsのvalue値を集めたVecを返す。データの順番は保持
     pub fn to_vec_f64(&self) -> Vec<f64> {
         self.signals.iter().map(|sig| sig.val()).collect::<Vec<f64>>()

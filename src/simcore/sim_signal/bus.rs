@@ -17,6 +17,17 @@ impl Bus {
     fn import_matrix(&mut self, matrix: &DMatrix<f64>) { // DMatrixの値をBusに取り込む（要素数が同じであることが前提）
         matrix.iter().enumerate().for_each(|(i, m)| self[i].set_val(*m));
     }
+
+    /// バス信号をすべてゼロリセットする
+    pub fn zero_reset(&mut self) {
+        self.iter_mut().for_each(|sig| sig.set_val(0.0));
+    }
+
+    /// バス信号をすべて指定値でリセットする
+    pub fn set_all(&mut self, value: f64) {
+        self.iter_mut().for_each(|sig| sig.set_val(value));
+    }
+    
 }
 
 /// Bus用の実装
