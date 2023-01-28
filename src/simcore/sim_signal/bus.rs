@@ -14,7 +14,7 @@ use anyhow::{*};
 extern crate nalgebra as na;
 use na::{DMatrix};
 impl Bus {
-    fn import_matrix(&mut self, matrix: &DMatrix<f64>) { // DMatrixの値をBusに取り込む（要素数が同じであることが前提）
+    pub fn import_matrix(&mut self, matrix: &DMatrix<f64>) { // DMatrixの値をBusに取り込む（要素数が同じであることが前提）
         matrix.iter().enumerate().for_each(|(i, m)| self[i].set_val(*m));
     }
 
@@ -107,6 +107,11 @@ impl RefBus {
     pub fn disconnect_all(&mut self) {
         self.iter_mut().for_each(|sig| sig.disconnect());
     }
+
+    pub fn export_to_matrix(&self) -> DMatrix<f64> { // DMatrixの値をBusに取り込む（要素数が同じであることが前提）
+        DMatrix::from_vec(self.len(), 1, self.to_vec_f64())
+    }
+
 }
 
 impl TryFrom<Vec<SigDef>> for RefBus {
@@ -131,12 +136,6 @@ impl fmt::Display for RefBus {
             |sig| format!("  {}", sig)).collect::<Vec<String>>().join("\n");
 
         write!(f, "RefBus: size = {}\nSignal List:\n{}\n", buslen, sigstr)
-    }
-}
-
-impl RefBus {
-    fn export_to_matrix(&self) -> DMatrix<f64> { // DMatrixの値をBusに取り込む（要素数が同じであることが前提）
-        DMatrix::from_vec(self.len(), 1, self.to_vec_f64())
     }
 }
 
