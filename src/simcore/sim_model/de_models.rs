@@ -1,8 +1,8 @@
 /// # DEモデル
 /// DEモデルには、下記のモデルを実装する
 
+/// - 微分方程式用トレイト
 /// - 状態空間モデル
-/// - 微分方程式モデル
 /// - 伝達関数モデル
 /// - 積分器モデル
 
@@ -15,7 +15,7 @@ use na::{DMatrix};
 use super::model_core::{ModelCore};
 
 use super::super::sim_signal;
-use sim_signal::signal::{SigDef, SigTrait};
+
 
 use sim_signal::bus::{Bus, RefBus};
 
@@ -250,7 +250,7 @@ impl fmt::Display for SpaceStateModel {
 }
 
 // 伝達関数から状態空間モデルを生成する
-pub fn crate_ssm_from_tf<'a> (num: &'a [f64], den: &'a [f64], inbus: RefBus, outbus: Bus, solvertype: SolverType) -> anyhow::Result<SpaceStateModel> {
+fn crate_ssm_from_tf<'a> (num: &'a [f64], den: &'a [f64], inbus: RefBus, outbus: Bus, solvertype: SolverType) -> anyhow::Result<SpaceStateModel> {
     let sdim = den.len() - 1;
     let idim = 1;
     let odim = 1;
@@ -319,9 +319,140 @@ pub fn crate_ssm_from_tf<'a> (num: &'a [f64], den: &'a [f64], inbus: RefBus, out
     Ok(model)
 }
 
+/// 伝達関数モデル
+#[derive(Debug, Clone)]
+pub struct TransFuncModel {
+    model: SpaceStateModel, // 内部的には状態空間モデルを持つ
+    num: Vec<f64>,          // 分子多項式の係数 2次の例 b2 * s^2 + b1 * s + b0
+    den: Vec<f64>,          // 分母多項式の係数 2次の例 a2 * s^2 + a1 * s + a0
+}
+
+impl TransFuncModel {
+    pub fn new(inbus: RefBus, outbus: Bus, num_coef: &[f64], den_coef: &[f64], solvertype: SolverType) -> anyhow::Result<Self> {
+        let model = crate_ssm_from_tf(&num_coef, &den_coef, inbus, outbus, solvertype).context("Failed to create Trasfer Function Model")?;
+        Ok(Self {
+            num : num_coef.to_vec(),
+            den : den_coef.to_vec(),  
+            model : model,
+        })
+    }
+
+    pub fn set_init_state(&mut self, init_state: &[f64]) -> anyhow::Result<()> {
+        self.model.set_init_state(init_state)
+    }
+}
+
+impl ModelCore for TransFuncModel {
+    fn initialize(&mut self) {
+        self.model.initialize();
+    }
+
+    fn finalize(&mut self) {
+        self.model.finalize();
+    }
+
+    fn interface_in(&mut self) -> Option<&mut RefBus> {
+        self.model.interface_in()
+    }
+
+    fn interface_out(&self) -> Option<&Bus> {
+        self.model.interface_out()
+    }
+    
+    fn nextstate(&mut self, sim_time: &SimTime) {
+        self.model.nextstate(sim_time);
+    }
+}
+
+impl fmt::Display for TransFuncModel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Transfer Function Model -- >> \n\tnum: {:?}\n\tden: {:?}\n", self.num, self.den)
+    }
+}
+
+/// 積分器モデル
+#[derive(Debug, Clone)]
+pub struct Integrator {
+    elemnum: usize,
+    x: DMatrix<f64>,
+    init_x: DMatrix<f64>, 
+    input_bus: RefBus,
+    output_bus: Bus,
+    solver: SolverType,      // ソルバータイプ
+}
+
+impl Integrator {
+    pub fn new(inbus: RefBus, outbus: Bus, solvertype: SolverType) -> anyhow::Result<Self> {
+        let elemnum = inbus.len();
+
+        if elemnum != outbus.len() {
+            return Err(anyhow!("入出力バスの長さは互いに同じである必要があります。"));
+        }
+
+        // inputとoutputの長さが同じかどうかのチェックが必要？
+        Ok(Self {
+            x: DMatrix::from_element(elemnum, 1, 0.0), 
+            init_x: DMatrix::from_element(elemnum, 1, 0.0), 
+            elemnum: elemnum,
+            input_bus: inbus,
+            output_bus: outbus,
+            solver: solvertype,
+        })
+    }
+
+    pub fn reset(&mut self, reset_val: f64) {
+        self.x = DMatrix::from_element(self.elemnum, 1, reset_val);
+    }
+}
+
+impl DEModel for Integrator {
+    fn derivative_func(&self, _x: &DMatrix<f64>) -> DMatrix<f64> {
+        self.input_bus.export_to_matrix()
+    }
+
+    fn set_state(&mut self, newstate: DMatrix<f64>) {
+        self.x = newstate; 
+    }
+
+    fn get_state(&self) -> &DMatrix<f64> {
+        &self.x
+    }
+}
+
+impl ModelCore for Integrator {
+    fn initialize(&mut self) {
+        self.x = self.init_x.clone();
+    }
+
+    fn finalize(&mut self) {
+        // 処理なし
+    }
+
+    fn interface_in(&mut self) -> Option<&mut RefBus> {
+        Some(&mut self.input_bus)
+    }
+
+    fn interface_out(&self) -> Option<&Bus> {
+        Some(&self.output_bus)
+    }
+
+    fn nextstate(&mut self, sim_time: &SimTime) {
+        let delta_t = sim_time.delta_t();
+
+        match self.solver { 
+            SolverType::Euler => self.euler_method(delta_t),
+            SolverType::RungeKutta => self.rungekutta_method(delta_t),
+        }
+
+        self.output_bus.import_matrix(&self.x);
+    }
+}
+
+/// テスト
 #[cfg(test)]
 mod simmodel_test {
     use super::*;
+    use sim_signal::signal::{SigDef, SigTrait};
     // cargo test -- --test-threads=1　シングルスレッドで実行したいとき
     /*fn print_typename<T>(_: T) {
         println!("{}", std::any::type_name::<T>());
@@ -395,4 +526,168 @@ mod simmodel_test {
         println!("output => \n{}", output);
     }
 
+    #[test]
+    #[should_panic]
+    fn ssm_set_errtest() {
+        let input_bus = RefBus::try_from(vec![
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+        ]).unwrap();
+
+        let _model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+
+    }
+
+    #[test]
+    #[should_panic]
+    fn ssm_set_mtrx_a_errtest() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+        model.set_mtrx_a(&[2.0, 1.0]).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn ssm_set_mtrx_b_errtest() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+        
+        model.set_mtrx_b(&[2.0, 1.0, 2.0]).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn ssm_set_mtrx_c_errtest() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+        model.set_mtrx_c(&[2.0, 1.0, 2.0]).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn ssm_set_mtrx_d_errtest() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+        model.set_mtrx_d(&[2.0, 1.0, 2.0]).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn ssm_set_x_errtest() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+        model.set_x(&[2.0, 1.0, 2.0]).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn ssm_set_init_x_errtest() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+        model.set_init_state(&[2.0, 1.0, 2.0]).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn tf_set_errtest1() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let _model = TransFuncModel::new(input_bus, output_bus, &[1.0, 0.0, 2.0, 2.0], &[2.0, 1.0, 1.0], SolverType::Euler).unwrap();       
+    }
+
+    #[test]
+    #[should_panic]
+    fn tf_set_errtest2() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let _model = TransFuncModel::new(input_bus, output_bus, &[1.0], &[2.0], SolverType::Euler).unwrap();       
+    }
+
+    #[test]
+    fn tf_settest() {
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+
+        let tfmodel = TransFuncModel::new(input_bus, output_bus, &[2.0, 2.0], &[2.0, 1.0, 1.0], SolverType::Euler).unwrap();
+
+        let input_bus = RefBus::try_from(vec![
+            SigDef::new("i1", "Nm")
+        ]).unwrap();
+
+        let output_bus = Bus::try_from(vec![
+            SigDef::new("o1", "rpm")
+        ]).unwrap();
+        let mut ssm = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+
+        ssm.set_mtrx_a(&[0.0, -0.5, 1.0, -0.5]).unwrap();
+        ssm.set_mtrx_b(&[1.0, 1.0]).unwrap();
+        ssm.set_mtrx_c(&[0.0, 1.0]).unwrap();
+
+        assert_eq!(tfmodel.model.mtrx_a, ssm.mtrx_a);
+        assert_eq!(tfmodel.model.mtrx_b, ssm.mtrx_b);
+        assert_eq!(tfmodel.model.mtrx_c, ssm.mtrx_c);
+        assert_eq!(tfmodel.model.mtrx_d, ssm.mtrx_d);
+
+        println!("{}\n", tfmodel);
+    }
 }

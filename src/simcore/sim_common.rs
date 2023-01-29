@@ -1,7 +1,3 @@
-extern crate nalgebra as na;
-use na::{DVector};
-
-use anyhow::{Context};
 
 use std::f64::consts::{PI};
 
@@ -34,4 +30,33 @@ impl UnitTrans for f64 {
     }
 }
 
+pub trait Saturation<T: Clone> {
+    fn guard_min(self, guard: T) -> Self;
+    fn guard_max(self, guard: T) -> Self;
+    fn guard_minmax(self, guard: (T, T)) -> Self;
+}
 
+impl Saturation<f64> for f64 {
+    fn guard_min(self, guard: f64) -> f64 {
+        if self < guard {
+            guard
+        }
+        else {
+            self
+        }
+    }
+
+    fn guard_max(self, guard: f64) -> f64 {
+        if self > guard {
+            guard
+        } 
+        else {
+            self
+        }
+    }
+
+    fn guard_minmax(self, guard: (f64, f64)) -> f64 {
+        let temp = self.guard_max(guard.1);
+        temp.guard_min(guard.0)
+    }
+}
