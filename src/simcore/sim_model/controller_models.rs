@@ -68,7 +68,7 @@ impl PIDController {
 }
 
 impl ModelCore for PIDController {
-    fn initialize(&mut self) {
+    fn initialize(&mut self, _sim_time: &SimTime) {
         self.integrator.reset(0.0);
     }
 

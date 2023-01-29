@@ -161,7 +161,7 @@ impl SpaceStateModel {
 }
 
 impl ModelCore for SpaceStateModel {
-    fn initialize(&mut self) {
+    fn initialize(&mut self, _sim_time: &SimTime) {
         self.x = self.init_x.clone();
     }
 
@@ -343,8 +343,8 @@ impl TransFuncModel {
 }
 
 impl ModelCore for TransFuncModel {
-    fn initialize(&mut self) {
-        self.model.initialize();
+    fn initialize(&mut self, sim_time: &SimTime) {
+        self.model.initialize(sim_time);
     }
 
     fn finalize(&mut self) {
@@ -420,7 +420,7 @@ impl DEModel for Integrator {
 }
 
 impl ModelCore for Integrator {
-    fn initialize(&mut self) {
+    fn initialize(&mut self, _sim_time: &SimTime) {
         self.x = self.init_x.clone();
     }
 

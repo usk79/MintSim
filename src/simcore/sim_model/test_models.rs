@@ -37,7 +37,7 @@ impl TestModel {
 }
 
 impl ModelCore for TestModel {
-    fn initialize(&mut self) {
+    fn initialize(&mut self, _sim_time: &SimTime) {
         self.state = 0.0;
     }
 
@@ -92,7 +92,7 @@ impl TestModel2 {
 }
 
 impl ModelCore for TestModel2 {
-    fn initialize(&mut self) {
+    fn initialize(&mut self, _sim_time: &SimTime) {
         self.state = 0.0;
     }
     fn finalize(&mut self) {}

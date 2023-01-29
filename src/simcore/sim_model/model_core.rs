@@ -8,7 +8,7 @@ pub const DEFAULT_DELTA_T: f64  = 0.1;
 
 pub trait ModelCore {
     /// 初期化処理
-    fn initialize(&mut self);
+    fn initialize(&mut self, sim_time: &SimTime);
 
     /// シミュレーション時間を1ステップ進める
     fn nextstate(&mut self, sim_time: &SimTime);

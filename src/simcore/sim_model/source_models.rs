@@ -8,7 +8,7 @@
 /// - 三角波関数
 /// - Lookup（CSVファイル読み込み）
 
-use super::model_core::{ModelCore, DEFAULT_DELTA_T};
+use super::model_core::{ModelCore};
 
 use super::super::sim_signal;
 use sim_signal::signal::{SigDef, SigTrait};
@@ -48,7 +48,7 @@ impl Constant {
 }
 
 impl ModelCore for Constant {
-    fn initialize(&mut self) {
+    fn initialize(&mut self, _sim_time: &SimTime) {
         
     }
 
@@ -97,7 +97,7 @@ impl StepFunc {
 }
 
 impl ModelCore for StepFunc {
-    fn initialize(&mut self) {
+    fn initialize(&mut self, _sim_time: &SimTime) {
         self.outbus.set_all(self.init_value);
     }
 

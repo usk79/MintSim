@@ -50,8 +50,16 @@ impl SimTime {
         self.delta_t
     }
     /// シミュレーションのステップ数を取得する
-    pub fn step_num(&self) -> u32 {
-        ((self.end_time - self.start_time) / self.delta_t) as u32
+    pub fn step_num(&self) -> usize {
+        ((self.end_time - self.start_time) / self.delta_t) as usize
+    }
+    /// シミュレーションの開始時刻を終了する
+    pub fn start_time(&self) -> f64 {
+        self.start_time
+    }
+    /// シミュレーションの終了時刻を終了する
+    pub fn end_time(&self) -> f64 {
+        self.end_time
     }
 }
 
@@ -129,7 +137,7 @@ impl<'a> SimSystem<'a> {
     fn initialize(&mut self) {
         println!("Simulation Initializing Now ...\n");
         self.sim_time.reset();
-        self.models.iter_mut().for_each(|mdl| mdl.initialize());
+        self.models.iter_mut().for_each(|mdl| mdl.initialize(&self.sim_time));
     }
 
     fn finalize(&mut self) {
