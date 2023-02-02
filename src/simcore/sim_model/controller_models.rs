@@ -32,6 +32,7 @@ pub struct PIDController {
 }
 
 impl PIDController {
+    /// PID 入力バス定義：第1要素目⇒目標値、第2要素⇒現在値
     pub fn new(inbus: RefBus, outbus: Bus, gain: (f64, f64, f64), minmax: (f64, f64), solvertype: SolverType) -> anyhow::Result<Self> {
         
         if inbus.len() != 2 {

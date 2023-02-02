@@ -1,7 +1,8 @@
 /// # basicモデル
 /// basicモデルには、下記のモデルを実装する
 /// 
-/// - delayモデル
+/// - step delayモデル
+/// - time delayモデル
 /// - unit delayモデル
 
 use super::model_core::{ModelCore};

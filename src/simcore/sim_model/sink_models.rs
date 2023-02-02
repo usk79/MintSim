@@ -5,7 +5,7 @@
 use super::model_core::{ModelCore};
 
 use super::super::sim_signal;
-use sim_signal::signal::{SigDef, SigTrait};
+use sim_signal::signal::{SigTrait};
 
 use sim_signal::bus::{Bus, RefBus};
 
@@ -18,7 +18,7 @@ use plotters::coord::Shift;
 use std::fs::File;
 use std::io::{Write, BufWriter};
 
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow};
 
 #[derive(Debug)]
 pub struct SimRecorder {
@@ -159,6 +159,7 @@ impl ModelCore for SimRecorder {
 
 #[cfg(test)]
 mod scope_test {
+
     use super::*;
     use sim_signal::signal::{SigDef};
     #[test]
@@ -175,7 +176,8 @@ mod scope_test {
             SigDef::new("motor_current", "A"),
         ]).unwrap();
 
-        inbus.connect_to(&bus, &["motor_trq", "motor_volt", "motor_current"], &["motor_trq", "motor_volt", "motor_current"]);
+        inbus.connect_to(&bus, &["motor_trq", "motor_volt", "motor_current"], &["motor_trq", "motor_volt", "motor_current"]).unwrap();
+        
 
         let mut scope = SimRecorder::new(inbus);
         let mut sim_time = SimTime::new(0.0, 1.0, 0.001);
@@ -183,14 +185,13 @@ mod scope_test {
         bus[0].set_val(1.0);
         bus[1].set_val(2.0);
         
-
         scope.initialize(&sim_time);
 
         assert_eq!(scope.storage[0][0], 1.0);
         assert_eq!(scope.storage[1][0], 2.0);
         assert_eq!(scope.storage[2][0], 0.0);
 
-        while let Some((i, _t)) = sim_time.next() { // ここをイテレータにする　gitignoreにcsv pngを追加してからコミットする
+        while let Some((i, _t)) = sim_time.next() { 
 
             bus[0].set_val(i as f64);
             bus[1].set_val((i * 2) as f64);
@@ -200,7 +201,7 @@ mod scope_test {
         }
 
         scope.export("test_output\\scope_pushtest.csv").unwrap();
-        scope.timeplot_all("test_output\\scope_pushtest.png", (500, 500), (3, 1)).unwrap();
+        scope.timeplot_all("test_output\\scope_pushtest.png", (500, 500), (4, 1)).unwrap();
 
         assert_eq!(scope.storage[0][10], 10.0);
         assert_eq!(scope.storage[1][10], 20.0);

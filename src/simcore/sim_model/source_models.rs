@@ -4,14 +4,14 @@
 /// - 定数モデル
 /// - Step関数
 /// - Ramp関数
-/// - Sin関数
 /// - 三角波関数
-/// - Lookup（CSVファイル読み込み）
+/// - 矩形波
+/// - Lookup（CSVファイル読み込み）　時間に足りない分の選択肢（0にするか、繰り返すか）　時間の間は線形補完
 
 use super::model_core::{ModelCore};
 
 use super::super::sim_signal;
-use sim_signal::signal::{SigDef, SigTrait};
+
 
 use sim_signal::bus::{Bus, RefBus};
 use super::super::sim_system;
@@ -40,7 +40,7 @@ pub struct Constant {
 }
 
 impl Constant {
-    fn new(outbus: Bus) -> Self {
+    pub fn new(outbus: Bus) -> Self {
         Self {
             outbus: outbus,
         }
@@ -56,7 +56,7 @@ impl ModelCore for Constant {
         // 処理なし
     }
 
-    fn nextstate(&mut self, sim_time: &SimTime) {
+    fn nextstate(&mut self, _sim_time: &SimTime) {
         // 処理なし
     }
 
@@ -69,14 +69,6 @@ impl ModelCore for Constant {
     }
 }
 
-#[cfg(test)]
-mod sim_const_test {
-    use super::{*};
-    use super::super::super::sim_signal::signal::{*};
-
-
-}
-
 /// STEP関数モデル
 pub struct StepFunc {
     outbus: Bus,
@@ -86,7 +78,7 @@ pub struct StepFunc {
 }
 
 impl StepFunc {
-    fn new(outbus: Bus, step_time: f64, init_value:f64, final_value: f64) -> Self {
+    pub fn new(outbus: Bus, step_time: f64, init_value:f64, final_value: f64) -> Self {
         Self {
             outbus: outbus,
             step_time: step_time,
@@ -117,5 +109,41 @@ impl ModelCore for StepFunc {
 
     fn interface_out(&self) -> Option<&Bus> {
         Some(&self.outbus)
+    }
+}
+
+#[cfg(test)]
+mod source_model_test {
+    use super::*;
+    
+    use crate::simcore::sim_model::sink_models::SimRecorder;
+    use crate::simcore::sim_system::SimSystem;
+    use sim_signal::signal::{SigDef};
+
+    #[test]
+    fn step_func_test() {
+        
+        let stbus = Bus::try_from(vec![
+            SigDef::new("step", "-"),
+        ]).unwrap();
+
+        let st = StepFunc::new(stbus, 0.3, 0.2, 0.5);
+        
+        let mut scope_bus = RefBus::try_from(vec![
+            SigDef::new("step", "-"),
+        ]).unwrap();
+
+        scope_bus.connect_to(st.interface_out().unwrap(), &["step"], &["step"]).unwrap();
+        let scope = SimRecorder::new(scope_bus);
+
+        let mut sys = SimSystem::new(0.0, 1.0, 0.01);
+        
+        sys.regist_model(st);
+        sys.regist_model(scope);
+        
+        sys.run(); // sysに名前から中のモデルにアクセスできるようにハッシュマップをもたせる
+
+        
+
     }
 }

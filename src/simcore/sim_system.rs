@@ -16,6 +16,10 @@ pub struct SimTime {
 }
 
 impl SimTime {
+    /// SimTime
+    /// start_time: シミュレーション開始時刻
+    /// end_time: シミュレーション終了時刻
+    /// delta_t: シミュレーションステップ時間
     pub fn new(start_time: f64, end_time: f64, delta_t: f64) -> Self {
         Self {
             time: start_time,

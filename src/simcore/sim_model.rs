@@ -5,4 +5,6 @@ pub mod sink_models;
 pub mod source_models;
 pub mod controller_models;
 pub mod sample_models;
+pub mod subsystem;
 pub mod test_models;
+
