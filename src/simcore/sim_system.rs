@@ -1,5 +1,7 @@
 /// モデルを組み合わせて一つのシステムを構成する
 
+use std::collections::HashMap;
+
 use super::sim_model::model_core::{ModelCore, DEFAULT_DELTA_T};
 use super::sim_signal;
 use sim_signal::bus::{Bus, RefBus};
@@ -85,8 +87,9 @@ impl Iterator for SimTime {
 /// モデル同士の接続とシミュレーションの実行を司る
 pub struct SimSystem<'a> {
     sim_time: SimTime,
-    models: Vec<Box<dyn ModelCore + 'a>>, // 個々のモデルを管理するベクタ　ひとまず、この配列順で実行する。将来的には、calc_orderなどの計算順を決める配列を用意する
+    models: Vec<Box<dyn ModelCore + 'a>>, // 個々のモデルを管理するHashMap　
                                           // Boxは参照しているのでstructの本体とライフタイムが一致する必要があるためライフタイムパラメータが必要
+    calc_order: Vec<String>, // 計算の実行順序  現状は登録順で実行するが将来的にはモデルの接続関係を見て自動的に決定する
 }
 
 impl<'a> SimSystem<'a> {
@@ -94,6 +97,7 @@ impl<'a> SimSystem<'a> {
         Self {
             sim_time: SimTime::new(start_time, end_time, delta_t),
             models: Vec::<Box<dyn ModelCore>>::new(),
+            calc_order: Vec::new(),
         }
     }
 
@@ -105,9 +109,10 @@ impl<'a> SimSystem<'a> {
         &mut self.sim_time
     }
 
-    pub fn regist_model<T>(&mut self, model: T) 
+    pub fn regist_model<T>(&mut self, model: T, name: impl Into<String>) 
         where T: ModelCore + 'a
     {
+        // ここから修正
         self.models.push(Box::new(model));
     }
 
