@@ -1,8 +1,12 @@
+use std::{collections::HashMap};
+
 /// モデルを組み合わせて一つのシステムを構成する
 
-use super::sim_model::model_core::{ModelCore, DEFAULT_DELTA_T};
-use super::sim_signal;
-use sim_signal::bus::{Bus, RefBus};
+use super::sim_model::{model_core, sink_models};
+use model_core::{ModelCore, DEFAULT_DELTA_T};
+use sink_models::SimRecorder;
+
+
 
 /// SimTime
 /// シミュレーションの時間を管理
@@ -87,6 +91,7 @@ pub struct SimSystem<'a> {
     sim_time: SimTime,
     models: Vec<Box<dyn ModelCore + 'a>>, // 個々のモデルを管理するベクタ　ひとまず、この配列順で実行する。将来的には、calc_orderなどの計算順を決める配列を用意する
                                           // Boxは参照しているのでstructの本体とライフタイムが一致する必要があるためライフタイムパラメータが必要
+    recorders: HashMap<String, SimRecorder>, // シミュレーション結果を保存するレコーダコンテナ SimRecorderはinbusを持っていて必要なモデルに接続してあることが必要
 }
 
 impl<'a> SimSystem<'a> {
@@ -94,6 +99,7 @@ impl<'a> SimSystem<'a> {
         Self {
             sim_time: SimTime::new(start_time, end_time, delta_t),
             models: Vec::<Box<dyn ModelCore>>::new(),
+            recorders: HashMap::new(),
         }
     }
 
@@ -111,8 +117,15 @@ impl<'a> SimSystem<'a> {
         self.models.push(Box::new(model));
     }
 
+    pub fn regist_recorder(&mut self, name: impl Into<String>, recorder: SimRecorder) {
+        self.recorders.insert(name.into(), recorder);
+    }
+
     pub fn nextstate(&mut self) {
+        // 各モデルを1ステップ進める
         self.models.iter_mut().for_each(|mdl| mdl.nextstate(&self.sim_time));
+        // 登録してあるレコーダーに結果を格納する
+        self.recorders.iter_mut().for_each(|(_name, rcd)| rcd.nextstate(&self.sim_time));
     }
 
     pub fn run(&mut self) {
@@ -157,6 +170,7 @@ impl<'a> From<Vec<Box<dyn ModelCore>>> for SimSystem<'a>
         Self {
             sim_time: SimTime { time: 0.0, step: 0, delta_t: DEFAULT_DELTA_T, start_time: 0.0, end_time: 1.0 },
             models: mdl_list,
+            recorders: HashMap::new(),
         }
     }
 }
@@ -164,8 +178,9 @@ impl<'a> From<Vec<Box<dyn ModelCore>>> for SimSystem<'a>
 #[cfg(test)]
 mod sim_bus_test {
     use super::{*};
-    use super::super::sim_model::test_models::{*};
-    use super::super::sim_signal::signal::{*};
+    use crate::simcore::sim_model::test_models::{*};
+    use crate::simcore::sim_signal::signal::{*};
+    use crate::simcore::sim_signal::bus::{*};
 
     #[test]
     fn system_regist_test() {
