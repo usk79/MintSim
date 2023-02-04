@@ -1,4 +1,5 @@
 use std::{collections::HashMap};
+use anyhow::{anyhow};
 
 /// モデルを組み合わせて一つのシステムを構成する
 use super::sim_model::{model_core, sink_models};
@@ -119,6 +120,16 @@ impl<'a> SimSystem<'a> {
         self.recorders.insert(name.into(), recorder);
     }
 
+    pub fn get_recorder(&mut self, name: impl Into<String>) -> anyhow::Result<&mut SimRecorder> {
+        let rcd_name = name.into();
+        let rcd = self.recorders.get_mut(&rcd_name);
+
+        match rcd {
+            Some(r) => Ok(r),
+            None => Err(anyhow!("レコーダが見つかりません。レコーダ名:{}", &rcd_name))
+        }
+    }
+
     pub fn nextstate(&mut self) {
         // 各モデルを1ステップ進める
         self.models.iter_mut().for_each(|mdl| mdl.nextstate(&self.sim_time));
@@ -151,13 +162,21 @@ impl<'a> SimSystem<'a> {
 
     fn initialize(&mut self) {
         println!("Simulation Initializing Now ...\n");
+        // 時刻の初期化
         self.sim_time.reset();
+        // モデルの初期化
         self.models.iter_mut().for_each(|mdl| mdl.initialize(&self.sim_time));
+        // レコーダの初期化
+        self.recorders.iter_mut().for_each(|(_name, rcd)| rcd.initialize(&self.sim_time));
     }
 
     fn finalize(&mut self) {
         println!("Simulation Finalizing Now ...\n");
+        // モデルのファイナライズ
         self.models.iter_mut().for_each(|mdl| mdl.finalize());
+        // レコーダのファイナライズ (特に処理はないが将来処理を追加した時のために呼び出し)
+        self.recorders.iter_mut().for_each(|(_name, rcd)| rcd.finalize());
+
     }
 }
 
