@@ -1,11 +1,9 @@
 use std::{collections::HashMap};
 
 /// モデルを組み合わせて一つのシステムを構成する
-
 use super::sim_model::{model_core, sink_models};
 use model_core::{ModelCore, DEFAULT_DELTA_T};
 use sink_models::SimRecorder;
-
 
 
 /// SimTime
@@ -89,7 +87,7 @@ impl Iterator for SimTime {
 /// モデル同士の接続とシミュレーションの実行を司る
 pub struct SimSystem<'a> {
     sim_time: SimTime,
-    models: Vec<Box<dyn ModelCore + 'a>>, // 個々のモデルを管理するベクタ　ひとまず、この配列順で実行する。将来的には、calc_orderなどの計算順を決める配列を用意する
+    models: Vec<Box<dyn ModelCore + 'a>>, // 個々のモデルを管理するHashMap　
                                           // Boxは参照しているのでstructの本体とライフタイムが一致する必要があるためライフタイムパラメータが必要
     recorders: HashMap<String, SimRecorder>, // シミュレーション結果を保存するレコーダコンテナ SimRecorderはinbusを持っていて必要なモデルに接続してあることが必要
 }
@@ -111,9 +109,10 @@ impl<'a> SimSystem<'a> {
         &mut self.sim_time
     }
 
-    pub fn regist_model<T>(&mut self, model: T) 
+    pub fn regist_model<T>(&mut self, model: T, name: impl Into<String>) 
         where T: ModelCore + 'a
     {
+        // ここから修正
         self.models.push(Box::new(model));
     }
 
