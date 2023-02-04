@@ -109,10 +109,9 @@ impl<'a> SimSystem<'a> {
         &mut self.sim_time
     }
 
-    pub fn regist_model<T>(&mut self, model: T, name: impl Into<String>) 
+    pub fn regist_model<T>(&mut self, model: T) 
         where T: ModelCore + 'a
     {
-        // ここから修正
         self.models.push(Box::new(model));
     }
 
