@@ -10,6 +10,7 @@ use crate::simcore::sim_signal::signal::SigTrait;
 /// - 矩形波
 /// - Lookup（CSVファイル読み込み）　時間に足りない分の選択肢（0にするか、繰り返すか）　時間の間は線形補完
 use anyhow::{anyhow};
+use std::f64::consts::{PI};
 
 use super::model_core::{ModelCore};
 
@@ -136,7 +137,7 @@ impl ModelCore for StepFunc {
 /// Ramp関数モデル
 /// Ramp関数は初期値、増加開始時刻、増加の傾きによって決まる関数
 #[derive(Debug)]
-struct RampFunc {
+pub struct RampFunc {
     outbus: Bus, 
     settings: Vec<(f64, f64, bool, f64, f64)>, // Vec<(init_value, final_value, start_time, slope, limit_enable)>
 }
@@ -195,12 +196,97 @@ impl ModelCore for RampFunc {
     }
 }
 
+/// # 波の関数の種類定義
+#[derive(Debug)]
+enum WaveFuncType {
+    Sin,        // 正弦波
+    Triangle,   // 三角波
+    // 矩形波（Duty50の矩形波のみ）
+}
+
+/// # 波の関数の設定用構造体
+/// 振幅・位相・周期（周波数）・オフセットをメンバ持つ構造体。
+/// 正弦波、三角波、矩形波などの周期関数の設定で共通使用する
+#[derive(Debug)]
+pub struct WaveFuncSetting {
+    fn_type: WaveFuncType,
+    amplitude: f64, // 振幅
+    phase: f64,  // 位相[rad]
+    period: f64, // 周期[s]
+    offset: f64, // オフセット
+}
+
+/// 正弦波関数モデル
+#[derive(Debug)]
+pub struct SinFunc {
+    outbus: Bus,
+    settings: Vec<WaveFuncSetting>,
+}
+
+impl SinFunc {
+    /// ## SinFuncの引数定義
+    /// 1. 第1引数：Bus
+    /// 1. 第2引数：settings: Vec<WafeFuncSetting>
+    pub fn new(outbus: Bus, settings: Vec<WaveFuncSetting>) -> anyhow::Result<Self> {
+        if outbus.len() != settings.len() {
+            return Err(anyhow!("outbusとsettingsの要素数は一致している必要があります。\noutbus.len = {}, settings.len = {} ", outbus.len(), settings.len()));
+        }
+
+        Ok(Self{
+            outbus: outbus,
+            settings: settings,
+        })
+    }
+   
+}
+
+/// 振幅1 周期2πの波関数定義
+fn wave_func(set: &WaveFuncSetting, t: f64) -> f64 {
+    match set.fn_type {
+        WaveFuncType::Sin => t.sin(),
+        WaveFuncType::Triangle => t.cos(),
+    }
+}
+
+impl ModelCore for SinFunc {
+    fn initialize(&mut self, _sim_time: &SimTime) {
+        self.outbus.iter_mut().enumerate().for_each(|(idx, sig)|{
+            let set = &self.settings[idx];
+            let t = set.phase;
+            let val = set.amplitude * t.sin() + set.offset;
+            sig.set_val(val);
+        })
+    }
+
+    fn finalize(&mut self) {
+        // 処理なし
+    }
+
+    fn nextstate(&mut self, sim_time: &SimTime) {
+        self.outbus.iter_mut().enumerate().for_each(|(idx, sig)| {
+            let set = &self.settings[idx];
+            let t = 2.0 * sim_time.time() / set.period * PI + set.phase;
+            let val = set.amplitude * wave_func(set, t) + set.offset;
+            sig.set_val(val);
+        })
+    }
+
+    fn interface_in(&mut self) -> Option<&mut RefBus> {
+        None
+    }
+
+    fn interface_out(&self) -> Option<&Bus> {
+        Some(&self.outbus)
+    }
+}
+
 #[cfg(test)]
 mod source_model_test {
     use super::*;
     
     use crate::simcore::sim_model::sink_models::SimRecorder;
     use crate::simcore::sim_system::SimSystem;
+    use crate::simcore::sim_common::UnitTrans;
     use sim_signal::signal::{SigDef};
 
     #[test]
@@ -296,8 +382,8 @@ mod source_model_test {
             vec![
                 (0.5, 1.5, true, 0.2, 2.0),
                 (0.5, 0.0, false, 0.3, 2.0),
-                (0.5, -1.5, true, 0.3, -2.0),
-                (0.5, 0.0, false, 0.3, -2.0),
+                (-0.5, -1.5, true, 0.2, -2.0),
+                (-0.5, 0.0, false, 0.3, -2.0),
             ]
         ).unwrap();
 
@@ -341,8 +427,82 @@ mod source_model_test {
             vec![
                 (0.5, 1.5, true, 0.2, 2.0),
                 (0.5, 0.0, false, 0.3, 2.0),
-                (0.5, -1.5, true, 0.3, -2.0),
+                (0.5, -1.5, true, 0.2, -2.0),
                 (0.5, 0.0, false, 0.3, -2.0),]
         ).unwrap();
+    }
+
+    #[test]
+    fn sin_func_test() {
+        let sinf = SinFunc::new(
+            Bus::try_from(vec![
+                SigDef::new("Sin1", "Nm"),
+                SigDef::new("Sin2", "A"),
+            ]).unwrap(),
+            vec![
+                WaveFuncSetting {
+                    fn_type: WaveFuncType::Sin,
+                    amplitude: 2.0,
+                    phase: 0.0,
+                    period: 0.5,
+                    offset: 0.0,
+                },
+                WaveFuncSetting {
+                    fn_type: WaveFuncType::Sin,
+                    amplitude: 2.0,
+                    phase: 90.0.deg2rad(),
+                    period: 0.3,
+                    offset: 1.0,
+                },
+            ]
+        ).unwrap();
+
+        let mut scp = SimRecorder::new(
+            RefBus::try_from(vec![
+                SigDef::new("Scp_rf1", "Nm"),
+                SigDef::new("Scp_rf2", "A"),
+            ]).unwrap()
+        );
+
+        scp.interface_in().unwrap().connect_to(sinf.interface_out().unwrap(),
+            &["Sin1", "Sin2"],
+            &["Scp_rf1", "Scp_rf2"] 
+        ).unwrap();
+
+        let mut sys = SimSystem::new(0.0, 1.0, 0.01);
+
+        sys.regist_model(sinf);
+        sys.regist_recorder("scp1", scp);
+
+        sys.run();
+
+        sys.get_recorder("scp1").unwrap().timeplot_all(
+            "test_output\\sin_func.png", 
+            (500, 500),
+            (2, 1)
+        ).unwrap();
+
+
+    }
+
+    #[test]
+    #[should_panic]
+    fn sin_func_panic_test() {
+        let _sinf = SinFunc::new(
+            Bus::try_from(vec![
+                SigDef::new("Sin1", "Nm"),
+                SigDef::new("Sin2", "A"),
+            ]).unwrap(),
+            vec![
+                WaveFuncSetting {
+                    fn_type: WaveFuncType::Sin,
+                    amplitude: 2.0,
+                    phase: 0.0,
+                    period: 0.5,
+                    offset: 0.0,
+                },
+            ]
+        ).unwrap();
+
     }
 }

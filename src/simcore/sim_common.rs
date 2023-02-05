@@ -10,6 +10,8 @@ pub trait UnitTrans {
     fn deg2rad(&self) -> Self;
     fn kph2mps(&self) -> Self;
     fn mps2kph(&self) -> Self;
+    fn prd2frq(&self) -> Self;
+    fn frq2prd(&self) -> Self;
 } 
 
 impl UnitTrans for f64 {
@@ -27,6 +29,14 @@ impl UnitTrans for f64 {
 
     fn mps2kph(&self) -> f64 {
         self * 3.6
+    }
+
+    fn frq2prd(&self) -> f64 {
+        1.0 / self
+    }
+
+    fn prd2frq(&self) -> f64 {
+        1.0 / self
     }
 }
 
