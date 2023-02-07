@@ -198,10 +198,11 @@ impl ModelCore for RampFunc {
 
 /// # 波の関数の種類定義
 #[derive(Debug)]
+#[allow(dead_code)]
 enum WaveFuncType {
     Sin,        // 正弦波
     Triangle,   // 三角波
-    // 矩形波（Duty50の矩形波のみ）
+    Square,     // 矩形波（Duty50の矩形波のみ）
 }
 
 /// # 波の関数の設定用構造体
@@ -218,12 +219,12 @@ pub struct WaveFuncSetting {
 
 /// 正弦波関数モデル
 #[derive(Debug)]
-pub struct SinFunc {
+pub struct WaveFunc {
     outbus: Bus,
     settings: Vec<WaveFuncSetting>,
 }
 
-impl SinFunc {
+impl WaveFunc {
     /// ## SinFuncの引数定義
     /// 1. 第1引数：Bus
     /// 1. 第2引数：settings: Vec<WafeFuncSetting>
@@ -240,20 +241,39 @@ impl SinFunc {
    
 }
 
-/// 振幅1 周期2πの波関数定義
+/// 振幅1 周期2π or 1sの波関数定義
 fn wave_func(set: &WaveFuncSetting, t: f64) -> f64 {
     match set.fn_type {
         WaveFuncType::Sin => t.sin(),
-        WaveFuncType::Triangle => t.cos(),
+        WaveFuncType::Triangle => {
+            let t1 = t - (t as i32) as f64; // 小数点以下のみを抽出する
+    
+            if t1 <= 0.25 {
+                return 4.0 * t1;
+            } else if t1 <= 0.75 {
+                return 2.0 - 4.0 * t;
+            } else {
+                return 4.0 * t1- 4.0;
+            }
+        },
+        WaveFuncType::Square => {
+            let t1 = t - (t as i32) as f64; // 小数点以下のみを抽出する
+
+            if t1 < 0.5 {
+                return 0.0
+            } else {
+                return 1.0
+            }
+        }
     }
 }
 
-impl ModelCore for SinFunc {
+impl ModelCore for WaveFunc {
     fn initialize(&mut self, _sim_time: &SimTime) {
         self.outbus.iter_mut().enumerate().for_each(|(idx, sig)|{
             let set = &self.settings[idx];
             let t = set.phase;
-            let val = set.amplitude * t.sin() + set.offset;
+            let val = set.amplitude * wave_func(&set, t) + set.offset;
             sig.set_val(val);
         })
     }
@@ -434,10 +454,14 @@ mod source_model_test {
 
     #[test]
     fn sin_func_test() {
-        let sinf = SinFunc::new(
+        let sinf = WaveFunc::new(
             Bus::try_from(vec![
                 SigDef::new("Sin1", "Nm"),
                 SigDef::new("Sin2", "A"),
+                SigDef::new("Tri1", "Nm"),
+                SigDef::new("Tri2", "A"),
+                SigDef::new("Squ1", "Nm"),
+                SigDef::new("Squ2", "A"),
             ]).unwrap(),
             vec![
                 WaveFuncSetting {
@@ -454,6 +478,34 @@ mod source_model_test {
                     period: 0.3,
                     offset: 1.0,
                 },
+                WaveFuncSetting {
+                    fn_type: WaveFuncType::Triangle,
+                    amplitude: 2.0,
+                    phase: 0.0,
+                    period: 0.5,
+                    offset: 0.0,
+                },
+                WaveFuncSetting {
+                    fn_type: WaveFuncType::Triangle,
+                    amplitude: 2.0,
+                    phase: 0.0,
+                    period: 0.3,
+                    offset: 1.0,
+                },
+                WaveFuncSetting {
+                    fn_type: WaveFuncType::Square,
+                    amplitude: 2.0,
+                    phase: 0.0,
+                    period: 0.5,
+                    offset: 0.0,
+                },
+                WaveFuncSetting {
+                    fn_type: WaveFuncType::Square,
+                    amplitude: 2.0,
+                    phase: 0.0,
+                    period: 0.3,
+                    offset: 1.0,
+                },
             ]
         ).unwrap();
 
@@ -461,12 +513,16 @@ mod source_model_test {
             RefBus::try_from(vec![
                 SigDef::new("Scp_rf1", "Nm"),
                 SigDef::new("Scp_rf2", "A"),
+                SigDef::new("Scp_rf3", "Nm"),
+                SigDef::new("Scp_rf4", "A"),
+                SigDef::new("Scp_rf5", "Nm"),
+                SigDef::new("Scp_rf6", "A"),
             ]).unwrap()
         );
 
         scp.interface_in().unwrap().connect_to(sinf.interface_out().unwrap(),
-            &["Sin1", "Sin2"],
-            &["Scp_rf1", "Scp_rf2"] 
+            &["Sin1", "Sin2", "Tri1", "Tri2", "Squ1", "Squ2"],
+            &["Scp_rf1", "Scp_rf2", "Scp_rf3", "Scp_rf4", "Scp_rf5", "Scp_rf6"] 
         ).unwrap();
 
         let mut sys = SimSystem::new(0.0, 1.0, 0.01);
@@ -479,7 +535,7 @@ mod source_model_test {
         sys.get_recorder("scp1").unwrap().timeplot_all(
             "test_output\\sin_func.png", 
             (500, 500),
-            (2, 1)
+            (2, 3)
         ).unwrap();
 
 
@@ -488,7 +544,7 @@ mod source_model_test {
     #[test]
     #[should_panic]
     fn sin_func_panic_test() {
-        let _sinf = SinFunc::new(
+        let _sinf = WaveFunc::new(
             Bus::try_from(vec![
                 SigDef::new("Sin1", "Nm"),
                 SigDef::new("Sin2", "A"),
