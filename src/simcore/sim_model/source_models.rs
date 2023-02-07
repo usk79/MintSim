@@ -241,25 +241,27 @@ impl WaveFunc {
    
 }
 
-/// 振幅1 周期2π or 1sの波関数定義
+/// 振幅1 周期2πの波関数定義
 fn wave_func(set: &WaveFuncSetting, t: f64) -> f64 {
     match set.fn_type {
         WaveFuncType::Sin => t.sin(),
         WaveFuncType::Triangle => {
-            let t1 = t - (t as i32) as f64; // 小数点以下のみを抽出する
+            let t1 = t / (2.0 * PI); // 0～2πを0～1の範囲に正規化する
+            let t2 = t1 - (t1 as i32) as f64; // 小数点以下のみを抽出する
     
-            if t1 <= 0.25 {
-                return 4.0 * t1;
-            } else if t1 <= 0.75 {
-                return 2.0 - 4.0 * t;
+            if t2 <= 0.25 {
+                return 4.0 * t2;
+            } else if t2 <= 0.75 {
+                return 2.0 - 4.0 * t2;
             } else {
-                return 4.0 * t1- 4.0;
+                return 4.0 * t2- 4.0;
             }
         },
         WaveFuncType::Square => {
-            let t1 = t - (t as i32) as f64; // 小数点以下のみを抽出する
+            let t1 = t / (2.0 * PI); // 0～2πを0～1の範囲に正規化する
+            let t2 = t1 - (t1 as i32) as f64; // 小数点以下のみを抽出する
 
-            if t1 < 0.5 {
+            if t2 < 0.5 {
                 return 0.0
             } else {
                 return 1.0
@@ -535,7 +537,7 @@ mod source_model_test {
         sys.get_recorder("scp1").unwrap().timeplot_all(
             "test_output\\sin_func.png", 
             (500, 500),
-            (2, 3)
+            (3, 2)
         ).unwrap();
 
 
