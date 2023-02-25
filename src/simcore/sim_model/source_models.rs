@@ -198,8 +198,7 @@ impl ModelCore for RampFunc {
 
 /// # 波の関数の種類定義
 #[derive(Debug)]
-#[allow(dead_code)]
-enum WaveFuncType {
+pub enum WaveFuncType {
     Sin,        // 正弦波
     Triangle,   // 三角波
     Square,     // 矩形波（Duty50の矩形波のみ）
