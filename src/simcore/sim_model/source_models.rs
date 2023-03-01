@@ -81,6 +81,7 @@ impl ModelCore for ConstantFunc {
 
 /// # STEP関数モデル
 /// 指定した時刻未満の時は初期値を出力し、指定時刻以降は最終値を出力する
+/// settingsには(init_value, final_value, step_time)で指定する
 #[derive(Debug)]
 pub struct StepFunc {
     outbus: Bus,
