@@ -4,7 +4,7 @@
 /// - RLC回路
 /// - ボールアンドビーム
 use super::model_core::{ModelCore};
-use super::de_models::{SpaceStateModel, SolverType};
+use super::de_models::{SpaceStateModel, SolverType, DEModel};
 
 use super::super::sim_signal;
 use sim_signal::signal::{SigDef, SigTrait};
@@ -104,17 +104,84 @@ mod sample_model_test {
 /// ボールアンドビームのサンプル
 extern crate nalgebra as na;
 use na::{DMatrix};
-
+#[derive(Debug)]
 struct BallAndBeam {
-    _rball: f64, // ボールの半径[m]
+    rball: f64, // ボール半径[m]
     mball: f64, // ボール重量[kg]
     jball: f64, // ボールの慣性モーメント[kg・m^2]
     jbeam: f64, // ビームの慣性モーメント[kg・,^2]
-    _mu: f64, // ボールの転がり抵抗係数[-]
-    _k: f64, // 空気抵抗係数[N/(m/s)^2]
-    _m0: f64, // 途中計算
-    m1: f64, // 途中計算
+    m0: f64, // 等価質量
     inbus: RefBus, // 入力バス（モータトルク）
     outbus: Bus, // 出力バス（ボール位置、ビーム角度）
-    
+}
+
+impl BallAndBeam {
+    /// ball_r: ボール半径[m] ball_weight: ボール重量[kg] ball_inertia: ボールイナーシャ beam_inertia：ビームイナーシャ
+    pub fn new(ball_r: f64, ball_weight: f64, ball_inertia: f64, beam_inertia: f64) -> Self {        
+        Self {
+            rball: ball_r,
+            mball: ball_weight,
+            jball: ball_inertia,
+            jbeam: beam_inertia,
+            m0: ball_weight / (ball_weight + ball_inertia / ball_inertia.powi(2)),
+            inbus: RefBus::try_from(vec![
+                        SigDef::new("trq", "Nm") // モータトルク
+                    ]).unwrap(),
+            outbus: Bus::try_from(vec![
+                        SigDef::new("ball_r", "m"),
+                        SigDef::new("ball_v", "m/s"),
+                        SigDef::new("beam_t", "rad"),
+                        SigDef::new("beam_w", "rad/s"),
+                    ]).unwrap(),
+        }
+    }
+}
+
+impl ModelCore for BallAndBeam {
+    fn initialize(&mut self, sim_time: &SimTime) {
+        self.outbus.iter_mut().for_each(|sig| sig.set_val(0));
+    }
+
+    fn finalize(&mut self) {
+        // 処理なし
+    }
+
+    fn nextstate(&mut self, sim_time: &SimTime) {
+        self.rungekutta_method(sim_time.delta_t())
+    }
+
+    fn interface_in(&mut self) -> Option<&mut RefBus> {
+        Some(&mut self.inbus)
+    }
+
+    fn interface_out(&self) -> Option<&Bus> {
+        Some(&self.outbus)
+    }
+
+}
+
+impl DEModel for BallAndBeam {
+    fn set_state(&mut self, newstate: DMatrix<f64>) {
+        self.outbus.import_matrix(&newstate);
+    }
+
+    fn get_state(&self) -> &DMatrix<f64> {
+        &self.outbus.export_to_matrix()
+    }
+
+    fn derivative_func(&self, x: &DMatrix<f64>) -> DMatrix<f64> {
+        let mut slope = DMatrix::from_element(4, 1, 0.0);
+            
+        // r
+        slope[0] = x[1];
+        // v                                                                 // 抵抗力の項　符号あってる？
+        slope[1] = self.m0 * G * x[2].sin() + self.m0 * x[0] * x[3] * x[3];// - self.mu * G * self.m1 * x[2].cos() - self.k * x[1] / self.m0; 
+        // theta
+        slope[2] = x[3];
+        // omega
+        let j0 = self.mball * x[0] * x[0] + self.jbeam + self.jball;
+        slope[3] = (self.u[0].value - 2.0 * self.mball * x[0] * x[1] * x[3] + self.mball * G * x[0] * x[2].cos()) / j0;
+
+        slope
+    }
 }
