@@ -14,6 +14,8 @@ use sim_signal::bus::{Bus, RefBus};
 use super::super::sim_system;
 use sim_system::SimTime;
 
+use super::super::sim_common::{G, UnitTrans};
+
 
 /// RLC直列回路の状態空間モデルを生成する関数（サンプル）
 /// https://qiita.com/code0327/items/423b0f0380e8c64f3580 数値はここを参考
@@ -49,7 +51,6 @@ mod sample_model_test {
     
     use crate::simcore::sim_model::{sink_models::SimRecorder, source_models::StepFunc};
     use crate::simcore::sim_system::SimSystem;
-    use crate::simcore::sim_common::UnitTrans;
     use sim_signal::signal::{SigDef};
 
     #[test]
@@ -105,41 +106,52 @@ mod sample_model_test {
 extern crate nalgebra as na;
 use na::{DMatrix};
 #[derive(Debug)]
-struct BallAndBeam {
-    rball: f64, // ボール半径[m]
+pub struct BallAndBeam {
     mball: f64, // ボール重量[kg]
     jball: f64, // ボールの慣性モーメント[kg・m^2]
     jbeam: f64, // ビームの慣性モーメント[kg・,^2]
     m0: f64, // 等価質量
     inbus: RefBus, // 入力バス（モータトルク）
     outbus: Bus, // 出力バス（ボール位置、ビーム角度）
+    state: DMatrix<f64>, // 状態ベクトル
 }
 
 impl BallAndBeam {
-    /// ball_r: ボール半径[m] ball_weight: ボール重量[kg] ball_inertia: ボールイナーシャ beam_inertia：ビームイナーシャ
-    pub fn new(ball_r: f64, ball_weight: f64, ball_inertia: f64, beam_inertia: f64) -> Self {        
+    /// ball_r: ボール半径[m], ball_weight: ボール重量[kg] ball_inertia: ボールイナーシャ beam_inertia：ビームイナーシャ
+    /// init_r: ボール初期位置[m]　init_v:ボール初速度[m/s] init_theta: ビーム初期角度[deg]　init_omega: ビーム初期角速度[deg/s]
+    pub fn new(ball_r: f64, ball_weight: f64, ball_inertia: f64, beam_inertia: f64, init_r: f64, init_v: f64, init_theta: f64, init_omega: f64) -> Self {        
+        let mut state = DMatrix::from_element(4, 1, 0.0);
+        state[0] = init_r;
+        state[1] = init_v;
+        state[2] = init_theta.deg2rad();
+        state[3] = init_omega.deg2rad();
+
         Self {
-            rball: ball_r,
             mball: ball_weight,
             jball: ball_inertia,
             jbeam: beam_inertia,
-            m0: ball_weight / (ball_weight + ball_inertia / ball_inertia.powi(2)),
+            m0: ball_weight / (ball_weight + ball_inertia / ball_r.powi(2)),
             inbus: RefBus::try_from(vec![
                         SigDef::new("trq", "Nm") // モータトルク
                     ]).unwrap(),
             outbus: Bus::try_from(vec![
                         SigDef::new("ball_r", "m"),
                         SigDef::new("ball_v", "m/s"),
-                        SigDef::new("beam_t", "rad"),
-                        SigDef::new("beam_w", "rad/s"),
+                        SigDef::new("beam_t", "deg"),
+                        SigDef::new("beam_w", "deg/s"),
                     ]).unwrap(),
+            state: state,
         }
     }
 }
 
 impl ModelCore for BallAndBeam {
-    fn initialize(&mut self, sim_time: &SimTime) {
-        self.outbus.iter_mut().for_each(|sig| sig.set_val(0));
+    fn initialize(&mut self, _sim_time: &SimTime) {
+        //self.outbus.iter_mut().for_each(|sig| sig.set_val(0.0));
+        self.outbus[0].set_val(self.state[0]);
+        self.outbus[1].set_val(self.state[1]);
+        self.outbus[2].set_val(self.state[2].rad2deg());
+        self.outbus[3].set_val(self.state[3].rad2deg());
     }
 
     fn finalize(&mut self) {
@@ -147,7 +159,14 @@ impl ModelCore for BallAndBeam {
     }
 
     fn nextstate(&mut self, sim_time: &SimTime) {
-        self.rungekutta_method(sim_time.delta_t())
+        self.rungekutta_method(sim_time.delta_t());
+        //self.euler_method(sim_time.delta_t());
+
+        //self.outbus.import_matrix(&self.state);
+        self.outbus[0].set_val(self.state[0]);
+        self.outbus[1].set_val(self.state[1]);
+        self.outbus[2].set_val(self.state[2].rad2deg());
+        self.outbus[3].set_val(self.state[3].rad2deg());
     }
 
     fn interface_in(&mut self) -> Option<&mut RefBus> {
@@ -162,25 +181,26 @@ impl ModelCore for BallAndBeam {
 
 impl DEModel for BallAndBeam {
     fn set_state(&mut self, newstate: DMatrix<f64>) {
-        self.outbus.import_matrix(&newstate);
+        self.state = newstate;
     }
 
     fn get_state(&self) -> &DMatrix<f64> {
-        &self.outbus.export_to_matrix()
+        &self.state
     }
 
     fn derivative_func(&self, x: &DMatrix<f64>) -> DMatrix<f64> {
         let mut slope = DMatrix::from_element(4, 1, 0.0);
-            
+        let u = self.inbus.get_by_name("trq").unwrap().val();
         // r
         slope[0] = x[1];
-        // v                                                                 // 抵抗力の項　符号あってる？
+        // v        
+        //slope[1] = 0.0;                                                         // 抵抗力の項　符号あってる？
         slope[1] = self.m0 * G * x[2].sin() + self.m0 * x[0] * x[3] * x[3];// - self.mu * G * self.m1 * x[2].cos() - self.k * x[1] / self.m0; 
         // theta
         slope[2] = x[3];
         // omega
         let j0 = self.mball * x[0] * x[0] + self.jbeam + self.jball;
-        slope[3] = (self.u[0].value - 2.0 * self.mball * x[0] * x[1] * x[3] + self.mball * G * x[0] * x[2].cos()) / j0;
+        slope[3] = (u - 2.0 * self.mball * x[0] * x[1] * x[3] + self.mball * G * x[0] * x[2].cos()) / j0;
 
         slope
     }

@@ -166,7 +166,7 @@ impl SigTrait for RefSignal {
     fn val(&self) -> f64{
         match &self.sig {
             Some(sig) => sig.borrow().val(),
-            None => panic!("参照先が設定されていません。")
+            None => panic!("RefSignalの参照先が設定されていません。信号名:{}", self.name())
         }
     }
 

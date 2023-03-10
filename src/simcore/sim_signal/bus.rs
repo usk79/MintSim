@@ -18,7 +18,7 @@ impl Bus {
         matrix.iter().enumerate().for_each(|(i, m)| self[i].set_val(*m));
     }
 
-    pub fn export_to_matrix(&self) -> DMatrix<f64> { // DMatrixの値をBusに取り込む（要素数が同じであることが前提）
+    pub fn export_to_matrix(&self) -> DMatrix<f64> { // BusをDmatrixに変換する（要素数が同じであることが前提）
         DMatrix::from_vec(self.len(), 1, self.to_vec_f64())
     }
 

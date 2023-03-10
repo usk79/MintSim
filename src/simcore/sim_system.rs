@@ -180,6 +180,7 @@ impl<'a> SimSystem<'a> {
     }
 }
 
+/* 逆に煩雑になるので実装しない
 impl<'a> From<Vec<Box<dyn ModelCore>>> for SimSystem<'a>
 {
     fn from(mdl_list: Vec<Box<dyn ModelCore>>) -> Self
@@ -190,7 +191,7 @@ impl<'a> From<Vec<Box<dyn ModelCore>>> for SimSystem<'a>
             recorders: HashMap::new(),
         }
     }
-}
+}*/
 
 #[cfg(test)]
 mod sim_bus_test {
