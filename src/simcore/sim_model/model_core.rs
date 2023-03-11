@@ -1,8 +1,9 @@
 
-use super::super::sim_signal;
+use crate::simcore::{sim_signal, sim_system};
 use sim_signal::bus::{Bus, RefBus};
-use super::super::sim_system;
+
 use sim_system::SimTime;
+
 use anyhow::{anyhow};
 
 pub const DEFAULT_DELTA_T: f64  = 0.1;

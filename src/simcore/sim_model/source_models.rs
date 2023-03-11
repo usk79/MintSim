@@ -12,13 +12,12 @@
 use anyhow::{anyhow, Context};
 use std::f64::consts::{PI};
 
-use super::model_core::{ModelCore};
+use crate::simcore::{sim_model, sim_signal, sim_system};
+use sim_model::model_core::{ModelCore};
 
-use crate::simcore::sim_signal;
-use sim_signal::signal::SigDef;
+use sim_signal::signal::{SigDef, SigTrait};
 use sim_signal::bus::{Bus, RefBus};
-use sim_signal::signal::SigTrait;
-use super::super::sim_system;
+
 use sim_system::SimTime;
 
 //　モデルを追加した時に実装するメソッド(ModelCoreトレイト)

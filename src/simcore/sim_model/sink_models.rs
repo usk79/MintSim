@@ -2,14 +2,14 @@
 /// Sinkモデルには、下記のモデルを実装する
 /// 
 /// - Recorderモデル
-use super::model_core::{ModelCore};
 
-use super::super::sim_signal;
+use crate::simcore::{sim_model, sim_signal, sim_system};
+
+use sim_model::model_core::{ModelCore};
+
 use sim_signal::signal::{SigTrait, SigDef};
-
 use sim_signal::bus::{Bus, RefBus};
 
-use super::super::sim_system;
 use sim_system::SimTime;
 
 use plotters::prelude::*;

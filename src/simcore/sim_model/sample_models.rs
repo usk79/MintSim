@@ -3,15 +3,13 @@
 /// 
 /// - RLC回路
 /// - ボールアンドビーム
-use super::model_core::{ModelCore};
-use super::de_models::{SpaceStateModel, SolverType, DEModel};
+use crate::simcore::{sim_model, sim_signal, sim_system};
+use sim_model::model_core::{ModelCore};
+use sim_model::de_models::{SpaceStateModel, SolverType, DEModel};
 
-use super::super::sim_signal;
 use sim_signal::signal::{SigDef, SigTrait};
-
 use sim_signal::bus::{Bus, RefBus};
 
-use super::super::sim_system;
 use sim_system::SimTime;
 
 use super::super::sim_common::{G, UnitTrans};
