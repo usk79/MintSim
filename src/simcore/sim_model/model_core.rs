@@ -25,7 +25,7 @@ pub trait ModelCore {
     fn interface_out(&self) -> Option<&Bus>;
 }
 
-/// 信号の接続（デフォルト実装） ⇒　今後実装先を考える（今のところSimSystemがよいかと: さらにconnectするときにモデルも登録するようにすれば登録忘れ防止にになる）
+/// 信号の接続
 pub fn connect_models<S: ModelCore, D:ModelCore>(srcmodel: &S, srclist: &[&str], dstmodel: &mut D, dstlist: &[&str]) -> anyhow::Result<()>{
     if let Some(srcbus) = srcmodel.interface_out() {
         

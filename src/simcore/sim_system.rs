@@ -88,7 +88,7 @@ impl Iterator for SimTime {
 /// モデル同士の接続とシミュレーションの実行を司る
 pub struct SimSystem<'a> {
     sim_time: SimTime,
-    models: Vec<Box<dyn ModelCore + 'a>>, // 個々のモデルを管理するHashMap　
+    models: Vec<Box<dyn ModelCore + 'a>>, // 個々のモデルを管理するコンテナ
                                           // Boxは参照しているのでstructの本体とライフタイムが一致する必要があるためライフタイムパラメータが必要
     recorders: HashMap<String, SimRecorder>, // シミュレーション結果を保存するレコーダコンテナ SimRecorderはinbusを持っていて必要なモデルに接続してあることが必要
 }
