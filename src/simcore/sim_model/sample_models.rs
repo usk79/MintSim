@@ -49,6 +49,7 @@ pub fn make_rlc_circuit_model(r: f64, l: f64, c: f64, init_i: f64, init_q: f64, 
 mod sample_model_test {
     use super::*;
     
+    use crate::simcore::sim_model::model_core::connect_models;
     use crate::simcore::sim_model::{sink_models::SimRecorder, source_models::StepFunc};
     use crate::simcore::sim_system::SimSystem;
     use sim_signal::signal::{SigDef};
@@ -59,30 +60,37 @@ mod sample_model_test {
         let mut rlc = make_rlc_circuit_model(2.0, 1e-3, 10e-6, 0.0, 0.0, SolverType::RungeKutta);
 
         let input = StepFunc::new(
-            Bus::try_from(vec![SigDef::new("v_in", "V")]).unwrap(),
+            vec![SigDef::new("v_in", "V")],
             vec![
                 (0.000, 1.0, 0.001),
             ]
         ).unwrap();
 
         let mut scp = SimRecorder::new(
-            RefBus::try_from(vec![
+            vec![
                 SigDef::new("V_in", "V"),   // 入力
             //    SigDef::new("q", "C"),   // コンデンサの電荷
                 SigDef::new("Vr", "V"),  // 抵抗の電圧
                 SigDef::new("Vc", "V"),  // コンデンサの電圧
                 //SigDef::new("Vl", "L"),  // インダクタの電圧
-            ]).unwrap()
-        );
+            ]
+        ).unwrap();
 
         // 信号の接続
-        rlc.interface_in().unwrap().connect_to(input.interface_out().unwrap(), 
-            &["v_in"], &["v_in"]).unwrap(); // 入力電圧をrlcモデルに接続
+        connect_models(
+            &input, &["v_in"], 
+            &mut rlc, &["v_in"]
+        ).unwrap(); // 入力電圧をrlcモデルに接続
+
+        connect_models(
+            &input, &["v_in"],
+            &mut scp, &["V_in"]
+        ).unwrap();
         
-        scp.interface_in().unwrap().connect_to(input.interface_out().unwrap(),
-            &["v_in"], &["V_in"]).unwrap();
-        scp.interface_in().unwrap().connect_to(rlc.interface_out().unwrap(), 
-            &["Vr", "Vc"], &["Vr", "Vc"]).unwrap(); // スコープにrlcの出力を接続
+        connect_models(
+            &rlc, &["Vr", "Vc"],
+            &mut scp, &["Vr", "Vc"]
+        ).unwrap(); // スコープにrlcの出力を接続
 
         // システムの定義
         let mut sys = SimSystem::new(0.0, 0.01, 0.00001);

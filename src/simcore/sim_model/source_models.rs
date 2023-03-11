@@ -1,4 +1,4 @@
-use crate::simcore::sim_signal::signal::SigTrait;
+
 
 /// # Sourceモデル
 /// Sourceモデルには、下記のモデルを実装する
@@ -9,14 +9,15 @@ use crate::simcore::sim_signal::signal::SigTrait;
 /// - 三角波関数
 /// - 矩形波
 /// - Lookup（CSVファイル読み込み）　時間に足りない分の選択肢（0にするか、繰り返すか）　時間の間は線形補完
-use anyhow::{anyhow};
+use anyhow::{anyhow, Context};
 use std::f64::consts::{PI};
 
 use super::model_core::{ModelCore};
 
-use super::super::sim_signal;
-
+use crate::simcore::sim_signal;
+use sim_signal::signal::SigDef;
 use sim_signal::bus::{Bus, RefBus};
+use sim_signal::signal::SigTrait;
 use super::super::sim_system;
 use sim_system::SimTime;
 
@@ -44,7 +45,8 @@ pub struct ConstantFunc {
 }
 
 impl ConstantFunc {
-    pub fn new(mut outbus: Bus, values: &[f64]) -> anyhow::Result<Self> {
+    pub fn new(output_def: Vec<SigDef>, values: &[f64]) -> anyhow::Result<Self> {
+        let mut outbus = Bus::try_from(output_def).context(format!("ConstantFuncの出力バスが不正です。"))?;
         if outbus.len() != values.len() {
             return Err(anyhow!("outbusとvaluesの要素数が異なります。outbus長:{}, values長:{}", outbus.len(), values.len()));
         }
@@ -94,7 +96,8 @@ impl StepFunc {
     /// 1. 第2引数：settings: Vec<(init_value, final_value, step_time)>
     /// ## 注意事項
     /// Busの要素数とsettingsの要素数は等しい必要があります。
-    pub fn new(outbus: Bus, settings: Vec<(f64, f64, f64)>) -> anyhow::Result<Self> {
+    pub fn new(output_def: Vec<SigDef>, settings: Vec<(f64, f64, f64)>) -> anyhow::Result<Self> {
+        let outbus = Bus::try_from(output_def).context(format!("StepFuncの出力バスが不正です。"))?;
         if outbus.len() != settings.len() {
             return Err(anyhow!("outbusとsettingsの要素数は一致している必要があります。\noutbus.len = {}, settings.len = {} ", outbus.len(), settings.len()))
         }
@@ -149,7 +152,8 @@ impl RampFunc {
     /// 1. 第2引数：settings: Vec<(init_value, limit_value, limit_enable, start_time, slope)>
     /// ## 注意事項
     /// Busの要素数とsettingsの要素数は等しい必要があります。
-    pub fn new(outbus: Bus, settings: Vec<(f64, f64, bool, f64, f64)>) -> anyhow::Result<Self> {
+    pub fn new(output_def: Vec<SigDef>, settings: Vec<(f64, f64, bool, f64, f64)>) -> anyhow::Result<Self> {
+        let outbus = Bus::try_from(output_def).context(format!("RampFuncの出力バスが不正です。"))?;
         if outbus.len() != settings.len() {
             return Err(anyhow!("outbusとsettingsの要素数は一致している必要があります。\noutbus.len = {}, settings.len = {} ", outbus.len(), settings.len()))
         }
@@ -228,7 +232,8 @@ impl WaveFunc {
     /// ## SinFuncの引数定義
     /// 1. 第1引数：Bus
     /// 1. 第2引数：settings: Vec<WafeFuncSetting>
-    pub fn new(outbus: Bus, settings: Vec<WaveFuncSetting>) -> anyhow::Result<Self> {
+    pub fn new(output_def: Vec<SigDef>, settings: Vec<WaveFuncSetting>) -> anyhow::Result<Self> {
+        let outbus = Bus::try_from(output_def).context(format!("WaveFuncの出力バスが不正です。"))?;
         if outbus.len() != settings.len() {
             return Err(anyhow!("outbusとsettingsの要素数は一致している必要があります。\noutbus.len = {}, settings.len = {} ", outbus.len(), settings.len()));
         }
@@ -306,7 +311,7 @@ impl ModelCore for WaveFunc {
 mod source_model_test {
     use super::*;
     
-    use crate::simcore::sim_model::sink_models::SimRecorder;
+    use crate::simcore::sim_model::{sink_models::SimRecorder, model_core::connect_models};
     use crate::simcore::sim_system::SimSystem;
     use crate::simcore::sim_common::UnitTrans;
     use sim_signal::signal::{SigDef};
@@ -314,10 +319,10 @@ mod source_model_test {
     #[test]
     fn const_test() {
         let con = ConstantFunc::new(
-            Bus::try_from(vec![
+            vec![
                 SigDef::new("Con1", "Nm"),
                 SigDef::new("Con2", "A"),
-            ]).unwrap(),
+            ],
             &[0.0, 1.0]
         ).unwrap();
 
@@ -329,10 +334,10 @@ mod source_model_test {
     #[should_panic]
     fn const_panic_test() {
         let _con = ConstantFunc::new(
-            Bus::try_from(vec![
+            vec![
                 SigDef::new("Con1", "Nm"),
                 SigDef::new("Con2", "A"),
-            ]).unwrap(),
+            ],
             &[0.0, 1.0, 3.0]
         ).unwrap();
     }
@@ -340,10 +345,10 @@ mod source_model_test {
     #[test]
     fn step_func_test() {
         let sf = StepFunc::new(
-            Bus::try_from(vec![
+            vec![
                 SigDef::new("st1", "Nm"),
                 SigDef::new("st2", "A"),
-            ]).unwrap(),
+            ],
             vec![
                 (0.5, 0.0, 1.0),
                 (0.3, 1.0, -1.0),
@@ -351,15 +356,15 @@ mod source_model_test {
         ).unwrap();
 
         let mut scp = SimRecorder::new(
-            RefBus::try_from(vec![
+            vec![
                 SigDef::new("Scp_st1", "Nm"),
                 SigDef::new("Scp_st2", "A"),
-            ]).unwrap()
-        );
+            ]
+        ).unwrap();
 
-        scp.interface_in().unwrap().connect_to(sf.interface_out().unwrap(), 
-            &["st1", "st2"], 
-            &["Scp_st1", "Scp_st2"],
+        connect_models(
+            &sf, &["st1", "st2"], 
+            &mut scp, &["Scp_st1", "Scp_st2"],
         ).unwrap();
 
         let mut sys = SimSystem::new(0.0, 1.0, 0.01);
@@ -381,10 +386,10 @@ mod source_model_test {
     #[should_panic]
     fn step_func_panic_test() {
         let _sf = StepFunc::new(
-            Bus::try_from(vec![
+            vec![
                 SigDef::new("Sf1", "Nm"),
                 SigDef::new("Sf2", "A"),
-            ]).unwrap(),
+            ],
             vec![
                 (0.5, 0.0, 1.0),
                 (0.3, 1.0, 1.5),
@@ -395,12 +400,12 @@ mod source_model_test {
     #[test]
     fn ramp_func_test() {
         let sf = RampFunc::new(
-            Bus::try_from(vec![
+            vec![
                 SigDef::new("rf1", "Nm"),
                 SigDef::new("rf2", "A"),
                 SigDef::new("rf3", "Nm"),
                 SigDef::new("rf4", "A"),
-            ]).unwrap(),
+            ],
             vec![
                 (0.5, 1.5, true, 0.2, 2.0),
                 (0.5, 0.0, false, 0.3, 2.0),
@@ -410,17 +415,17 @@ mod source_model_test {
         ).unwrap();
 
         let mut scp = SimRecorder::new(
-            RefBus::try_from(vec![
+            vec![
                 SigDef::new("Scp_rf1", "Nm"),
                 SigDef::new("Scp_rf2", "A"),
                 SigDef::new("Scp_rf3", "Nm"),
                 SigDef::new("Scp_rf4", "A"),
-            ]).unwrap()
-        );
+            ]
+        ).unwrap();
 
-        scp.interface_in().unwrap().connect_to(sf.interface_out().unwrap(), 
-            &["rf1", "rf2", "rf3", "rf4"], 
-            &["Scp_rf1", "Scp_rf2", "Scp_rf3", "Scp_rf4"],
+        connect_models(
+            &sf, &["rf1", "rf2", "rf3", "rf4"], 
+            &mut scp, &["Scp_rf1", "Scp_rf2", "Scp_rf3", "Scp_rf4"],
         ).unwrap();
 
         let mut sys = SimSystem::new(0.0, 1.0, 0.01);
@@ -442,10 +447,10 @@ mod source_model_test {
     #[should_panic]
     fn ramp_func_panic_test() {
         let _sf = RampFunc::new(
-            Bus::try_from(vec![
+            vec![
                 SigDef::new("Rf1", "Nm"),
                 SigDef::new("Rf2", "A"),
-            ]).unwrap(),
+            ],
             vec![
                 (0.5, 1.5, true, 0.2, 2.0),
                 (0.5, 0.0, false, 0.3, 2.0),
@@ -457,14 +462,14 @@ mod source_model_test {
     #[test]
     fn sin_func_test() {
         let sinf = WaveFunc::new(
-            Bus::try_from(vec![
+            vec![
                 SigDef::new("Sin1", "Nm"),
                 SigDef::new("Sin2", "A"),
                 SigDef::new("Tri1", "Nm"),
                 SigDef::new("Tri2", "A"),
                 SigDef::new("Squ1", "Nm"),
                 SigDef::new("Squ2", "A"),
-            ]).unwrap(),
+            ],
             vec![
                 WaveFuncSetting {
                     fn_type: WaveFuncType::Sin,
@@ -512,19 +517,19 @@ mod source_model_test {
         ).unwrap();
 
         let mut scp = SimRecorder::new(
-            RefBus::try_from(vec![
+            vec![
                 SigDef::new("Scp_rf1", "Nm"),
                 SigDef::new("Scp_rf2", "A"),
                 SigDef::new("Scp_rf3", "Nm"),
                 SigDef::new("Scp_rf4", "A"),
                 SigDef::new("Scp_rf5", "Nm"),
                 SigDef::new("Scp_rf6", "A"),
-            ]).unwrap()
-        );
+            ]
+        ).unwrap();
 
-        scp.interface_in().unwrap().connect_to(sinf.interface_out().unwrap(),
-            &["Sin1", "Sin2", "Tri1", "Tri2", "Squ1", "Squ2"],
-            &["Scp_rf1", "Scp_rf2", "Scp_rf3", "Scp_rf4", "Scp_rf5", "Scp_rf6"] 
+        connect_models(
+            &sinf, &["Sin1", "Sin2", "Tri1", "Tri2", "Squ1", "Squ2"],
+            &mut scp, &["Scp_rf1", "Scp_rf2", "Scp_rf3", "Scp_rf4", "Scp_rf5", "Scp_rf6"] 
         ).unwrap();
 
         let mut sys = SimSystem::new(0.0, 1.0, 0.01);
@@ -547,10 +552,10 @@ mod source_model_test {
     #[should_panic]
     fn sin_func_panic_test() {
         let _sinf = WaveFunc::new(
-            Bus::try_from(vec![
+            vec![
                 SigDef::new("Sin1", "Nm"),
                 SigDef::new("Sin2", "A"),
-            ]).unwrap(),
+            ],
             vec![
                 WaveFuncSetting {
                     fn_type: WaveFuncType::Sin,

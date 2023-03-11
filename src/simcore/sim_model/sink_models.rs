@@ -5,7 +5,7 @@
 use super::model_core::{ModelCore};
 
 use super::super::sim_signal;
-use sim_signal::signal::{SigTrait};
+use sim_signal::signal::{SigTrait, SigDef};
 
 use sim_signal::bus::{Bus, RefBus};
 
@@ -18,7 +18,7 @@ use plotters::coord::Shift;
 use std::fs::File;
 use std::io::{Write, BufWriter};
 
-use anyhow::{anyhow};
+use anyhow::{anyhow, Context};
 
 #[derive(Debug)]
 pub struct SimRecorder {
@@ -29,13 +29,15 @@ pub struct SimRecorder {
 }
 
 impl SimRecorder {
-    pub fn new(inbus: RefBus) -> Self {
-        Self {
+    pub fn new(input_def: Vec<SigDef>) -> anyhow::Result<Self>  {
+        let inbus = RefBus::try_from(input_def).context(format!("SimRecorderの入力バスが不正です。"))?;
+
+        Ok(Self {
             timedata: Vec::new(),
             storage: Vec::new(),
             signum: inbus.len(),
             input_bus: inbus,
-        }
+        })
     }
 
     pub fn export(&self, filepath: &str) -> anyhow::Result<()> {
@@ -170,16 +172,16 @@ mod scope_test {
             SigDef::new("motor_current", "A"),
         ]).unwrap();
 
-        let mut inbus = RefBus::try_from(vec![
+        let inbus = vec![
             SigDef::new("motor_trq", "Nm"),
             SigDef::new("motor_volt", "V"),
             SigDef::new("motor_current", "A"),
-        ]).unwrap();
+        ];
 
-        inbus.connect_to(&bus, &["motor_trq", "motor_volt", "motor_current"], &["motor_trq", "motor_volt", "motor_current"]).unwrap();
-        
+        let mut scope = SimRecorder::new(inbus).unwrap();
 
-        let mut scope = SimRecorder::new(inbus);
+        scope.interface_in().unwrap().connect_to(&bus, &["motor_trq", "motor_volt", "motor_current"], &["motor_trq", "motor_volt", "motor_current"]).unwrap();
+
         let mut sim_time = SimTime::new(0.0, 1.0, 0.001);
         
         bus[0].set_val(1.0);

@@ -6,8 +6,6 @@ use super::sim_model::{model_core, sink_models};
 use model_core::{ModelCore};
 use sink_models::SimRecorder;
 
-use super::sim_signal::signal::SigTrait;
-
 
 /// SimTime
 /// シミュレーションの時間を管理
@@ -164,17 +162,6 @@ impl<'a> SimSystem<'a> {
 
     fn initialize(&mut self) {
         println!("Simulation Initializing Now ...\n");
-        // 未接続の信号の有無チェック(未接続の信号を見つけても、エラーとせず警告を表示するだけ)
-        self.models.iter_mut().for_each(|mdl| {
-            if let Some(bus) = mdl.interface_in() { // 入力インターフェースを持つモデルだけをチェックする
-                bus.iter().for_each(|sig| {
-                    if !sig.is_connected() {
-                        println!("警告：信号{}は接続されていません。", sig.name());
-                    }
-                });
-            }
-        });
-
         // 時刻の初期化
         self.sim_time.reset();
         // モデルの初期化

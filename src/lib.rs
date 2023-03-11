@@ -1,9 +1,12 @@
 //extern crate anyhow;
 
 /// #ToDo
-/// - 実行前に未接続信号の警告を出せるようにする
-/// - 信号の接続（デフォルト実装） ⇒　今後実装先を考える（今のところSimSystemがよいかと: さらにconnectするときにモデルも登録するようにすれば登録忘れ防止にになる
-
+/// - 信号の接続するとき（デフォルト実装）接続元を記録しておくようにする
+///   1. モデルを作るときに時間からHashを生成して（model_coreに関数定義)モデル内にユニークキーとして持たせる
+///     　もしくはUUIDを使う
+/// 　2. conect_models関数を実行した時に接続先に接続元の情報を登録するようにする
+/// 　3. SimSystemでモデルを登録した時にIDをたどって接続関係をグラフ化する
+/// 　4. グラフを解析し実行順序を決める（できれば並列処理できるところも抽出したい）
 pub mod simcore;
 
 #[cfg(test)]
@@ -16,9 +19,8 @@ mod tests {
             sink_models::SimRecorder,
             de_models::SolverType,
     };
-    use crate::simcore::sim_signal::{bus, signal};
+    use crate::simcore::sim_signal::{signal};
     use crate::simcore::sim_system::SimSystem;
-    use bus::{*};
     use signal::{*};
 
     //use super::simcore::sim_signal::bus::{Bus};
@@ -29,7 +31,7 @@ mod tests {
         // Step. 1 モデルの作成
         // 目標値
         let input = StepFunc::new(
-            Bus::try_from(vec![SigDef::new("target_pos", "m")]).unwrap(),
+            vec![SigDef::new("target_pos", "m")],
             vec![(0.000, 0.5, 0.0)]
         ).unwrap(); // 目標位置
 
@@ -72,15 +74,15 @@ mod tests {
 
         // スコープの設定
         let mut scp = SimRecorder::new(
-            RefBus::try_from(vec![
+            vec![
                 SigDef::new("ball_pos", "m"),
                 SigDef::new("ball_spd", "m/s"),
                 SigDef::new("beam_angle", "deg"),
                 SigDef::new("beam_omega", "deg/s"),
                 SigDef::new("motor_trq", "Nm"),
                 SigDef::new("target_angle", "deg"),
-            ]).unwrap()
-        );
+            ]
+        ).unwrap();
 
         // Step. 2 信号の接続
         // 目標値とPIDコントローラ1段目の接続
@@ -131,7 +133,7 @@ mod tests {
 
         // Step. 3 シミュレーションモデルの登録
         let mut sys = SimSystem::new(0.0, 50.0, 0.001);
-
+        
         sys.regist_model(input);
         sys.regist_model(pos_ctrl);
         sys.regist_model(beam_ctrl);
@@ -161,7 +163,7 @@ mod tests {
         // Step. 1 モデルの作成
         // 目標値
         let input = StepFunc::new(
-            Bus::try_from(vec![SigDef::new("target_angle", "deg")]).unwrap(),
+            vec![SigDef::new("target_angle", "deg")],
             vec![(0.000, 0.0, 0.0)]
         ).unwrap(); // 目標位置
 
@@ -195,15 +197,14 @@ mod tests {
 
         // スコープの設定
         let mut scp = SimRecorder::new(
-            RefBus::try_from(vec![
+            vec![
                 SigDef::new("ball_pos", "m"),
                 SigDef::new("ball_spd", "m/s"),
                 SigDef::new("beam_angle", "deg"),
                 SigDef::new("beam_omega", "deg/s"),
                 SigDef::new("motor_trq", "Nm"),
                 SigDef::new("target_angle", "deg"),
-            ]).unwrap()
-        );
+            ]).unwrap();
 
         // Step. 2 信号の接続
         // 目標値とPIDコントローラ1段目の接続
