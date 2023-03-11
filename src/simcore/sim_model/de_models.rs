@@ -497,14 +497,14 @@ mod simmodel_test {
     #[test]
     fn ssm_interfacetest() {
 
-        let mut input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm"),
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm"),
             SigDef::new("o2", "Nm"),
-        ]).unwrap();
+        ];
         
         let mut databus = Bus::try_from(vec![
             SigDef::new("d1", "Nm")
@@ -512,9 +512,10 @@ mod simmodel_test {
 
         databus[0].set_val(1.0);
 
-        input_bus.connect_to(&databus, &["d1"], &["i1"]).unwrap();
-
         let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
+
+        model.interface_in().unwrap().connect_to(&databus, &["d1"], &["i1"]).unwrap();
+
         model.set_mtrx_a(&[1.0, 0.0, 0.0, 1.0]).unwrap();
         model.set_mtrx_b(&[1.0, 2.0]).unwrap();
         model.set_mtrx_c(&[1.0, 0.0, 0.0, 1.0]).unwrap();
@@ -533,11 +534,9 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn ssm_set_errtest() {
-        let input_bus = RefBus::try_from(vec![
-        ]).unwrap();
+        let input_bus = vec![];
 
-        let output_bus = Bus::try_from(vec![
-        ]).unwrap();
+        let output_bus = vec![];
 
         let _model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
 
@@ -546,13 +545,13 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn ssm_set_mtrx_a_errtest() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
         model.set_mtrx_a(&[2.0, 1.0]).unwrap();
@@ -561,13 +560,13 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn ssm_set_mtrx_b_errtest() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
         
@@ -577,13 +576,13 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn ssm_set_mtrx_c_errtest() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
         model.set_mtrx_c(&[2.0, 1.0, 2.0]).unwrap();
@@ -592,13 +591,13 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn ssm_set_mtrx_d_errtest() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
         model.set_mtrx_d(&[2.0, 1.0, 2.0]).unwrap();
@@ -607,13 +606,13 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn ssm_set_x_errtest() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
         model.set_x(&[2.0, 1.0, 2.0]).unwrap();
@@ -622,13 +621,13 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn ssm_set_init_x_errtest() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let mut model = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
         model.set_init_state(&[2.0, 1.0, 2.0]).unwrap();
@@ -637,13 +636,13 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn tf_set_errtest1() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let _model = TransFuncModel::new(input_bus, output_bus, &[1.0, 0.0, 2.0, 2.0], &[2.0, 1.0, 1.0], SolverType::Euler).unwrap();       
     }
@@ -651,36 +650,36 @@ mod simmodel_test {
     #[test]
     #[should_panic]
     fn tf_set_errtest2() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let _model = TransFuncModel::new(input_bus, output_bus, &[1.0], &[2.0], SolverType::Euler).unwrap();       
     }
 
     #[test]
     fn tf_settest() {
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
 
         let tfmodel = TransFuncModel::new(input_bus, output_bus, &[2.0, 2.0], &[2.0, 1.0, 1.0], SolverType::Euler).unwrap();
 
-        let input_bus = RefBus::try_from(vec![
+        let input_bus = vec![
             SigDef::new("i1", "Nm")
-        ]).unwrap();
+        ];
 
-        let output_bus = Bus::try_from(vec![
+        let output_bus = vec![
             SigDef::new("o1", "rpm")
-        ]).unwrap();
+        ];
         let mut ssm = SpaceStateModel::new(input_bus, output_bus, 2, SolverType::Euler).unwrap();
 
         ssm.set_mtrx_a(&[0.0, -0.5, 1.0, -0.5]).unwrap();

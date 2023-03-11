@@ -26,13 +26,13 @@ use super::super::sim_common::{G, UnitTrans};
 /// 第5引数：初期電荷[q]
 /// 第6引数：ソルバータイプ
 pub fn make_rlc_circuit_model(r: f64, l: f64, c: f64, init_i: f64, init_q: f64, stype: SolverType) -> SpaceStateModel {
-    let inbus = RefBus::try_from(vec![
+    let inbus = vec![
         SigDef::new("v_in", "V") // 入力電圧
-    ]).unwrap();
-    let outbus = Bus::try_from(vec![
+    ];
+    let outbus = vec![
         SigDef::new("Vr", "V"),  // 抵抗の電圧
         SigDef::new("Vc", "V"),  // コンデンサの電圧
-    ]).unwrap();
+    ];
 
     let mut model = SpaceStateModel::new(
         inbus, outbus, 2, stype).unwrap();
