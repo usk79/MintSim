@@ -70,8 +70,6 @@ mod tests {
             0.0
         );
 
-        
-
         // スコープの設定
         let mut scp = SimRecorder::new(
             RefBus::try_from(vec![
