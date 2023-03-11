@@ -35,8 +35,8 @@ mod tests {
 
         // PIDコントローラ1：位置制御
         let mut pos_ctrl = PIDController::new(
-            RefBus::try_from(vec![SigDef::new("target_pos", "m"), SigDef::new("pos", "m")]).unwrap() ,
-            Bus::try_from(vec![SigDef::new("target_angle", "deg")]).unwrap(),
+            vec![SigDef::new("target_pos", "m"), SigDef::new("pos", "m")],
+            vec![SigDef::new("target_angle", "deg")],
             (10.0, 0.1, 8.0),
             (-10.0, 10.0),
             SolverType::RungeKutta,
@@ -44,8 +44,8 @@ mod tests {
 
         // PIDコントローラ2：ビーム角度制御（モータ出力）
         let mut beam_ctrl = PIDController::new(
-            RefBus::try_from(vec![SigDef::new("target_angle", "deg"), SigDef::new("angle", "deg")]).unwrap() ,
-            Bus::try_from(vec![SigDef::new("motor_trq", "Nm")]).unwrap(),
+            vec![SigDef::new("target_angle", "deg"), SigDef::new("angle", "deg")],
+            vec![SigDef::new("motor_trq", "Nm")],
             (1.2, 0.05, 0.3),
             (-5.0, 5.0),
             SolverType::RungeKutta,
@@ -169,8 +169,8 @@ mod tests {
 
         // PIDコントローラ2：ビーム角度制御（モータ出力）
         let mut beam_ctrl = PIDController::new(
-            RefBus::try_from(vec![SigDef::new("target_angle", "deg"), SigDef::new("angle", "deg")]).unwrap() ,
-            Bus::try_from(vec![SigDef::new("motor_trq", "Nm")]).unwrap(),
+            vec![SigDef::new("target_angle", "deg"), SigDef::new("angle", "deg")],
+            vec![SigDef::new("motor_trq", "Nm")],
             (1.2, 0.05, 0.3),
             (-5.0, 5.0),
             SolverType::RungeKutta,

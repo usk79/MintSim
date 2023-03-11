@@ -15,7 +15,7 @@ use na::{DMatrix};
 use super::model_core::{ModelCore};
 
 use super::super::sim_signal;
-
+use sim_signal::signal::SigDef;
 
 use sim_signal::bus::{Bus, RefBus};
 
@@ -72,7 +72,10 @@ pub struct SpaceStateModel {
 }
 
 impl SpaceStateModel {
-    pub fn new(inbus: RefBus, outbus: Bus, sdim: usize, solvertype: SolverType) -> anyhow::Result<Self> {
+    pub fn new(input_def: Vec<SigDef>, output_def:  Vec<SigDef>, sdim: usize, solvertype: SolverType) -> anyhow::Result<Self> {
+        let inbus = RefBus::try_from(input_def).context(format!("SpaceStateModelの入力バスが不正です。"))?;
+        let outbus = Bus::try_from(output_def).context(format!("SpaceStateModelの出力バスが不正です。"))?;
+
         let idim = inbus.len();
         let odim = outbus.len();
         if sdim <= 0 || idim <= 0 || odim <= 0 {
@@ -250,7 +253,7 @@ impl fmt::Display for SpaceStateModel {
 }
 
 // 伝達関数から状態空間モデルを生成する
-fn crate_ssm_from_tf<'a> (num: &'a [f64], den: &'a [f64], inbus: RefBus, outbus: Bus, solvertype: SolverType) -> anyhow::Result<SpaceStateModel> {
+fn crate_ssm_from_tf<'a> (num: &'a [f64], den: &'a [f64], input_def: Vec<SigDef>, output_def: Vec<SigDef>, solvertype: SolverType) -> anyhow::Result<SpaceStateModel> {
     let sdim = den.len() - 1;
     let idim = 1;
     let odim = 1;
@@ -261,11 +264,11 @@ fn crate_ssm_from_tf<'a> (num: &'a [f64], den: &'a [f64], inbus: RefBus, outbus:
     if num.len() > den.len() {
         return Err(anyhow!("プロパーな伝達関数ではありません。"))
     }
-    if inbus.len() != 1 || outbus.len() != 1{
+    if input_def.len() != 1 || output_def.len() != 1{
         return  Err(anyhow!("伝達関数における入出力バスの次元は1である必要があります。"));
      }
 
-    let mut model = SpaceStateModel::new(inbus, outbus, sdim, solvertype)?;
+    let mut model = SpaceStateModel::new(input_def, output_def, sdim, solvertype)?;
     let an = den[0];
 
     // A行列の作成
@@ -328,8 +331,9 @@ pub struct TransFuncModel {
 }
 
 impl TransFuncModel {
-    pub fn new(inbus: RefBus, outbus: Bus, num_coef: &[f64], den_coef: &[f64], solvertype: SolverType) -> anyhow::Result<Self> {
-        let model = crate_ssm_from_tf(&num_coef, &den_coef, inbus, outbus, solvertype).context("Failed to create Trasfer Function Model")?;
+    pub fn new(input_def: Vec<SigDef>, output_def: Vec<SigDef>, num_coef: &[f64], den_coef: &[f64], solvertype: SolverType) -> anyhow::Result<Self> {
+
+        let model = crate_ssm_from_tf(&num_coef, &den_coef, input_def, output_def, solvertype).context("Failed to create Trasfer Function Model")?;
         Ok(Self {
             num : num_coef.to_vec(),
             den : den_coef.to_vec(),  
@@ -459,8 +463,8 @@ mod simmodel_test {
     }*/
     #[test] // StateSpaceModelのセット時のテスト 
     fn ssm_settest() {
-        let input = RefBus::try_from(vec![SigDef::new("i1", "Nm")]).unwrap();
-        let output = Bus::try_from(vec![SigDef::new("o1", "rpm")]).unwrap();
+        let input = vec![SigDef::new("i1", "Nm")];
+        let output =vec![SigDef::new("o1", "rpm")];
         let mut model = SpaceStateModel::new(input, output, 2, SolverType::Euler).unwrap();
 
         let mtrx_a = [1.0, 1.0, 1.0, 1.0];

@@ -3,7 +3,7 @@
 /// 
 /// - PID制御モデル
 
-use anyhow::{anyhow};
+use anyhow::{anyhow, Context};
 
 use super::model_core::{ModelCore};
 
@@ -33,8 +33,10 @@ pub struct PIDController {
 
 impl PIDController {
     /// PID 入力バス定義：第1要素目⇒目標値、第2要素⇒現在値
-    pub fn new(inbus: RefBus, outbus: Bus, gain: (f64, f64, f64), minmax: (f64, f64), solvertype: SolverType) -> anyhow::Result<Self> {
-        
+    pub fn new(input_def: Vec<SigDef>, output_def: Vec<SigDef>, gain: (f64, f64, f64), minmax: (f64, f64), solvertype: SolverType) -> anyhow::Result<Self> {
+        let inbus = RefBus::try_from(input_def).context(format!("PIDControllerの入力バスが不正です。"))?;
+        let outbus = Bus::try_from(output_def).context(format!("PIDControllerの出力バスが不正です。"))?;
+
         if inbus.len() != 2 {
             return Err(anyhow!("PIDController: 入力信号の要素数は2個（1要素目：目標値、2要素目：現在値)で設定してください"))
         }

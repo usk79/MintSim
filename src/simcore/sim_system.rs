@@ -3,7 +3,7 @@ use anyhow::{anyhow};
 
 /// モデルを組み合わせて一つのシステムを構成する
 use super::sim_model::{model_core, sink_models};
-use model_core::{ModelCore, DEFAULT_DELTA_T};
+use model_core::{ModelCore};
 use sink_models::SimRecorder;
 
 
