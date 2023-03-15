@@ -31,6 +31,15 @@ impl Bus {
     pub fn set_all(&mut self, value: f64) {
         self.iter_mut().for_each(|sig| sig.set_val(value));
     }
+
+    /// 値のコピー（バスの中の同じ名前の信号をコピーする）
+    pub fn copy_val_from_bus<T:SigTrait>(&mut self, srcbus: &BusCore<T>) {
+        self.iter_mut().for_each(|sig|{
+            if let Some(src) = srcbus.get_by_name(sig.name()) {
+                sig.set_val(src.val());
+            }
+        });
+    }
     
 }
 

@@ -89,6 +89,7 @@ impl<T: SigTrait> BusCore<T> {
     pub fn len(&self) -> usize {
         self.signals.len()
     }
+
 }
 
 /// Busのイテレータオブジェクト実装

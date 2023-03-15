@@ -21,8 +21,9 @@ use super::model_core::connect_models;
 /// サブシステムモデル
 pub struct SubSystem<'a> {
     inbus: RefBus, // 入力バス
-    collect_bus: RefBus, // 内部モデルの出力を一旦集集めるバス
+    inbus_buf: Bus, // 入力バスのバッファ inbusの値をコピーしておいておき、内部のモデルがここを参照する
     outbus: Bus, // 出力バス
+    outbus_buf: RefBus, // 出力バスのバッファ 内部モデルの出力をここで参照し、outbusにコピーして出力する
     models: Vec<Box<dyn ModelCore + 'a>>, // 個々のモデルを管理するHashMap
     delta_t: f64, // 時間刻み
 }
@@ -32,10 +33,14 @@ impl<'a> SubSystem<'a> {
         let inbus = RefBus::try_from(input_def).context(format!("SubSystemの入力バスが不正です。"))?;
         let outbus = Bus::try_from(output_def).context(format!("SubSystemの出力バスが不正です。"))?;
 
+        let inbus_def = inbus.get_sigdef();   // inbusと同じ信号定義でoutbus_bufを作成する 
+        let outbus_def = outbus.get_sigdef(); // outbusと同じ信号定義でoutbus_bufを作成する
+
         Ok(Self {
             inbus: inbus,
-            collect_bus: RefBus::try_from(outbus.get_sigdef()).unwrap(),  // outbusと同じ信号定義でcollectバスを作成する
+            inbus_buf: Bus::try_from(inbus_def).unwrap(),
             outbus: outbus,
+            outbus_buf: RefBus::try_from(outbus_def).unwrap(),
             models: Vec::<Box<dyn ModelCore>>::new(),
             delta_t: delta_t
         })
@@ -51,7 +56,7 @@ impl<'a> SubSystem<'a> {
     /// SubSystem内部のモデルの入力にSubSystemの入力インターフェースを接続する
     pub fn connect_inbus<T:ModelCore>(&self, target_mdl: &mut T, srclist: &[&str], dstlist: &[&str]) -> anyhow::Result<()> {
         if let Some(target_inbus) = target_mdl.interface_in() {
-            target_inbus.connect_to(&self.inbus, srclist, dstlist)?;
+            target_inbus.connect_to(&self.inbus_buf, srclist, dstlist)?;
         } else {
             return Err(anyhow!("入力インターフェースが定義されていないモデルです。信号の接続はできません。"));
         }
@@ -61,7 +66,7 @@ impl<'a> SubSystem<'a> {
     /// SubSystem内部のモデルの出力をSubSystemの出力インターフェースに接続する
     pub fn connect_outbus<T:ModelCore>(&mut self, target_mdl: &T, srclist: &[&str], dstlist: &[&str]) -> anyhow::Result<()> {
         if let Some(target_outbus) = target_mdl.interface_out() {
-
+            self.outbus_buf.connect_to(target_outbus, srclist, dstlist)?
         }
         Ok(())
     }
@@ -83,8 +88,12 @@ impl<'a> ModelCore for SubSystem<'a> {
     }
 
     fn nextstate(&mut self, sim_time: &SimTime) {
+        // 入力バスの値をバッファへコピーする
+        self.inbus_buf.copy_val_from_bus(&self.inbus);
         // 各モデルを1ステップ進める
         self.models.iter_mut().for_each(|mdl| mdl.nextstate(sim_time));
+        // 出力バッファの値を出力バスへコピーする
+        self.outbus.copy_val_from_bus(&self.outbus_buf);
     }
 
     fn interface_in(&mut self) -> Option<&mut RefBus> {
@@ -152,7 +161,7 @@ mod subsystem_test {
         sys.connect_inbus(&mut pos_ctrl, &["target_pos", "ball_pos"], &["target_pos", "pos"]).unwrap();
         sys.connect_inbus(&mut beam_ctrl, &["beam_angle"], &["angle"]).unwrap();
 
-        //sys.connect_outbus(&beam_ctrl, &["motor_trq"], &["motor_trq"]).unwrap();
+        sys.connect_outbus(&beam_ctrl, &["motor_trq"], &["motor_trq"]).unwrap();
 
         // サブシステムにモデルを登録する
         sys.regist_model(pos_ctrl);
@@ -221,7 +230,7 @@ mod subsystem_test {
         // ボールアンドビームの出力をコントローラへ接続
         connect_models(
             &bab,           &["ball_r", "beam_t"], 
-            &mut ctrl,  &["pos", "angle"]
+            &mut ctrl,  &["ball_pos", "beam_angle"]
         ).unwrap();
 
         // スコープに各種信号を接続
