@@ -15,9 +15,6 @@ use sim_signal::bus::{Bus, RefBus};
 
 use sim_system::SimTime;
 
-use super::model_core::connect_models;
-
-
 /// サブシステムモデル
 pub struct SubSystem<'a> {
     inbus: RefBus, // 入力バス
