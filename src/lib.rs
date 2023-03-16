@@ -15,13 +15,19 @@ pub mod prelude {
 
     // models
     pub use sim_model::{
-        sample_models::BallAndBeam, 
-        source_models::{StepFunc, WaveFunc, },
         controller_models::PIDController,
+
+        de_models::{SolverType, DEModel, SpaceStateModel, TransFuncModel, Integrator},
+
+        model_core::{connect_models, ModelCore},
+
+        sample_models::{BallAndBeam, make_rlc_circuit_model},
+
         sink_models::SimRecorder,
-        de_models::{SolverType},
+
+        source_models::{ConstantFunc, StepFunc, RampFunc, WaveFunc, WaveFuncType},
+        
         subsystem::SubSystem,
-        model_core::connect_models,
     };
 
     pub use sim_signal::{signal::SigDef};
@@ -31,20 +37,7 @@ pub mod prelude {
 
 #[cfg(test)]
 mod tests {
-    use crate::simcore::sim_model::model_core::{connect_models};
-    use crate::simcore::sim_model::{
-            sample_models::BallAndBeam, 
-            source_models::StepFunc,
-            controller_models::PIDController,
-            sink_models::SimRecorder,
-            de_models::SolverType,
-    };
-    use crate::simcore::sim_signal::{signal};
-    use crate::simcore::sim_system::SimSystem;
-    use signal::{*};
-
-    //use super::simcore::sim_signal::bus::{Bus};
-    //use super::simcore::sim_signal::signal::{Signal};
+    use crate::prelude::{*};
 
     #[test]
     fn ball_and_beam_test() {
