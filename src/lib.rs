@@ -31,6 +31,7 @@ pub mod prelude {
     };
 
     pub use sim_signal::{signal::SigDef};
+    pub use sim_signal::bus::{Bus, RefBus};
 
     pub use sim_system::SimSystem;
 }
