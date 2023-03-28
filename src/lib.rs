@@ -8,6 +8,7 @@
 /// 　3. SimSystemでモデルを登録した時にIDをたどって接続関係をグラフ化する
 /// 　4. グラフを解析し実行順序を決める（できれば並列処理できるところも抽出したい）
 /// 　ただしsubsystemの中のモデルはsubsystem内で閉じる必要ありなので注意
+///   モデルの接続関係を表すためのグラフモデルを作ろうかな
 pub mod simcore;
 
 pub mod prelude {
@@ -15,24 +16,27 @@ pub mod prelude {
 
     // models
     pub use sim_model::{
+        // コントローラモデル
         controller_models::PIDController,
-
+        // 常微分方程式モデル
         de_models::{SolverType, DEModel, SpaceStateModel, TransFuncModel, Integrator},
-
+        // モデルの共通トレイト
         model_core::{connect_models, ModelCore},
-
+        // サンプルモデル
         sample_models::{BallAndBeam, make_rlc_circuit_model},
-
+        // シンクモデル
         sink_models::SimRecorder,
-
+        // ソースモデル
         source_models::{ConstantFunc, StepFunc, RampFunc, WaveFunc, WaveFuncType},
-        
+        // サブシステム
         subsystem::SubSystem,
     };
 
+    // 信号定義
     pub use sim_signal::{signal::SigDef};
+    // バス定義
     pub use sim_signal::bus::{Bus, RefBus};
-
+    // システム
     pub use sim_system::SimSystem;
 }
 
