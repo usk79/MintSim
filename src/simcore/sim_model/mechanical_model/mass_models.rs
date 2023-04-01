@@ -7,7 +7,9 @@ use crate::prelude::{*};
 
 use anyhow::{anyhow, Context};
 
-
+/// 質点モデル
+/// 入力信号の要素数は3個（x, y, z)方向の力で設定してください  
+/// 出力信号の要素数は6個(x, y, z, vx, vy, vz)で設定してください  
 #[derive(Debug, Clone)]
 pub struct MassModel {
     model: SpaceStateModel,
@@ -82,24 +84,24 @@ mod mass_models_test {
     #[test]
     fn make_test() {
         let input = StepFunc::new(
-            vec![SigDef::new("Fx", "N"), SigDef::new("Fy", "N"), SigDef::new("Fz", "N")],
+            MakeSigList![("Fx", "N"), ("Fy", "N"), ("Fz", "N")],
             vec![(0.0, 0.1, 1.0), (0.0, 0.2, 2.0), (0.1, -0.1, 3.0)]
         ).unwrap();
 
         let mut model = MassModel::new(
-            vec![SigDef::new("Fx", "N"), SigDef::new("Fy", "N"), SigDef::new("Fz", "N")],
-            vec![SigDef::new("x", "m"), SigDef::new("y", "m"), SigDef::new("z", "m"), SigDef::new("Vx", "m/s"), SigDef::new("Vy", "m/s"), SigDef::new("Vz", "m/s")],
+            MakeSigList![("Fx", "N"), ("Fy", "N"), ("Fz", "N")],
+            MakeSigList![("x", "m"), ("y", "m"), ("z", "m"), ("Vx", "m/s"), ("Vy", "m/s"), ("Vz", "m/s")],
             1.0,
-            (0.0, 0.0, 0.0),
+            (1.0, 0.0, 0.0),
             (0.0, 0.0, 0.0),
             SolverType::Euler
         ).unwrap();
         // スコープ
         let mut scp = SimRecorder::new(
-            vec![
-                SigDef::new("Fx", "N"), SigDef::new("Fy", "N"), SigDef::new("Fz", "N"),
-                SigDef::new("x", "m"), SigDef::new("y", "m"), SigDef::new("z", "m"),
-                SigDef::new("Vx", "m/s"), SigDef::new("Vy", "m/s"), SigDef::new("Vz", "m/s"),
+                MakeSigList![
+                ("Fx", "N"), ("Fy", "N"), ("Fz", "N"),
+                ("x", "m"), ("y", "m"), ("z", "m"),
+                ("Vx", "m/s"), ("Vy", "m/s"), ("Vz", "m/s")
             ]
         ).unwrap();
 

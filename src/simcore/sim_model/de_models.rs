@@ -165,6 +165,10 @@ impl SpaceStateModel {
 impl ModelCore for SpaceStateModel {
     fn initialize(&mut self, _sim_time: &SimTime) {
         self.x = self.init_x.clone();
+
+        let obs = self.get_observation();
+
+        self.output_bus.import_matrix(&obs);
     }
 
     fn finalize(&mut self) {

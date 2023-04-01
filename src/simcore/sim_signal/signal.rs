@@ -26,6 +26,19 @@ impl fmt::Display for SigDef {
     }
 }
 
+#[macro_export]
+macro_rules! MakeSigList {
+    ($( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push(SigDef::new($x.0, $x.1));
+            )*
+            temp_vec
+        }
+    };
+}
+
 /// SigTrait
 pub trait SigTrait {
     /// 信号名を取得する

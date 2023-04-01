@@ -12,6 +12,7 @@
 pub mod simcore;
 
 pub mod prelude {
+    pub use crate::MakeSigList;
     pub use crate::simcore::{sim_model, sim_system, sim_signal, sim_common};
 
     // models
@@ -30,6 +31,8 @@ pub mod prelude {
         source_models::{ConstantFunc, StepFunc, RampFunc, WaveFunc, WaveFuncType},
         // サブシステム
         subsystem::SubSystem,
+        // 機械モデル
+        mechanical_model::{mass_models::MassModel, spring_models::SimpleSpring}
     };
 
     // 信号定義
